@@ -1,0 +1,4 @@
+aws_region     = "eu-west-1"
+project        = "gitflow-analyzer"
+env            = "dev"
+aws_account_id = "YOUR_ACCOUNT_ID_HERE"
