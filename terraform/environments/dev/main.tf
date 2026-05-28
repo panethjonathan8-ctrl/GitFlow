@@ -33,3 +33,12 @@ module "vpc" {
   # vpc_cidr and public_subnet_cidrs use the defaults defined in the module.
   # You only override them here if you need different values.
 }
+
+module "iam" {
+  source          = "../../modules/iam"
+  project         = var.project
+  env             = var.env
+  github_username = var.github_username
+  github_repo     = "gitflow-analyzer"
+  aws_account_id  = var.aws_account_id
+}

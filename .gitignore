@@ -1,8 +1,16 @@
-# Terraform
+# Terraform provider binaries and plugins
 **/.terraform/
+
+# State files — never commit these
 *.tfstate
 *.tfstate.backup
+
+# Real variable values — never commit these
 *.tfvars
+
+# Lock file — commit this so provider versions are pinned
+# (remove the next line if you already committed .terraform.lock.hcl)
+# .terraform.lock.hcl
 
 # Environment secrets
 .env
