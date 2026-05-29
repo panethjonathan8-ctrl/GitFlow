@@ -1,0 +1,127 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  # Only runs when terraform files change.
+  # If you only changed frontend code this workflow is skipped entirely.
+  # This saves CI minutes and keeps the feedback loop fast.
+
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+
+permissions:
+  id-token: write
+  # CRITICAL: This permission is what allows the workflow to request
+  # an OIDC token from GitHub. Without it the aws-actions step fails.
+  contents: read
+  pull-requests: write
+  # pull-requests: write allows the workflow to post the plan output
+  # as a comment on the PR so you can review it without leaving GitHub.
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # Downloads your repo code into the CI runner.
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          # This is the OIDC exchange you set up on Day 3.
+          # GitHub sends a JWT token to AWS, AWS verifies it against
+          # the OIDC provider you created, and returns temporary credentials.
+          # No secrets are used here — just the role ARN which is not sensitive.
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+          # Pin to the exact version you are using locally.
+          # Prevents CI from using a different version than your machine.
+
+      - name: Terraform Init
+        id: init
+        working-directory: terraform/environments/dev
+        run: terraform init
+        # Initialises the S3 backend and downloads providers.
+        # Uses the AWS credentials from the OIDC step above to access your state bucket.
+
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: terraform/environments/dev
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+        # Checks that all .tf files are properly formatted.
+        # continue-on-error: true means the workflow keeps going even if
+        # formatting is wrong — you will see it as a warning not a failure.
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: terraform/environments/dev
+        run: terraform validate
+        # Validates that the configuration is syntactically correct
+        # and internally consistent — catches typos and missing variables
+        # before even talking to AWS.
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: terraform/environments/dev
+        run: terraform plan -no-color -out=tfplan
+        env:
+          TF_VAR_aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
+          TF_VAR_github_username: ${{ vars.THE_USERNAME }}
+          # TF_VAR_ prefix is how you pass Terraform variables from
+          # environment variables. This keeps the values out of your
+          # tfvars files in CI while still being available to Terraform.
+        continue-on-error: true
+
+      - name: Post plan to PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          PLAN: ${{ steps.plan.outputs.stdout }}
+        with:
+          script: |
+            const output = `#### Terraform Plan 📖
+
+            #### Initialization ⚙️ \`${{ steps.init.outcome }}\`
+            #### Format Check 🖌 \`${{ steps.fmt.outcome }}\`
+            #### Validation 🤖 \`${{ steps.validate.outcome }}\`
+            #### Plan 📖 \`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+          # Posts the full plan output as a PR comment.
+          # Anyone reviewing the PR can see exactly what infrastructure
+          # changes will happen before approving the merge.
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+        # If the plan failed, fail the workflow so the PR is blocked.
+        # This prevents merging broken infrastructure changes.

@@ -17,3 +17,8 @@ output "ecr_repository_urls" {
   description = "ECR repository URLs for all services"
   value       = module.ecr.repository_urls
 }
+
+output "secret_arns" {
+  description = "Secret ARNs"
+  value       = module.secrets.secret_arns
+}

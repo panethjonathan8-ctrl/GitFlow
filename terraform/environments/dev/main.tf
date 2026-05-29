@@ -49,3 +49,9 @@ module "ecr" {
   # services and image_retention_count use the defaults defined in the module.
   # You only override them here if you need different values for this environment.
 }
+
+module "secrets" {
+  source  = "../../modules/secrets"
+  project = var.project
+  env     = var.env
+}
