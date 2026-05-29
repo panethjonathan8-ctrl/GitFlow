@@ -46,7 +46,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.8.5"
+          terraform_version: "1.10.5"
           # Pin to the exact version you are using locally.
           # Prevents CI from using a different version than your machine.
 
