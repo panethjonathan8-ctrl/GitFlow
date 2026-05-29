@@ -113,29 +113,68 @@ resource "aws_iam_role_policy" "terraform_state" {
   })
 }
 
-# ── Policy: Terraform infra permissions ───────────────────────────────────────
 resource "aws_iam_role_policy" "terraform_infra" {
   name = "terraform-infra"
   role = aws_iam_role.github_actions.id
-  # These are the permissions CI needs to run terraform plan and apply.
-  # Scoped to only the services this project actually uses.
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EC2VPC"
+        Sid      = "EC2VPC"
+        Effect   = "Allow"
+        Action   = ["ec2:*"]
+        Resource = "*"
+      },
+      {
+        Sid      = "EKS"
+        Effect   = "Allow"
+        Action   = ["eks:*"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRRead"
         Effect = "Allow"
         Action = [
-          "ec2:*"
+          "ecr:DescribeRepositories",
+          "ecr:GetRepositoryPolicy",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:GetLifecyclePolicy",
+          "ecr:GetLifecyclePolicyPreview",
+          "ecr:ListTagsForResource",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:GetAuthorizationToken",
+          "ecr:SetRepositoryPolicy",
+          "ecr:DeleteRepositoryPolicy",
+          "ecr:PutLifecyclePolicy",
+          "ecr:DeleteLifecyclePolicy",
+          "ecr:CreateRepository",
+          "ecr:DeleteRepository",
+          "ecr:TagResource",
+          "ecr:UntagResource"
         ]
         Resource = "*"
       },
       {
-        Sid    = "EKS"
+        Sid    = "SecretsManagerRead"
         Effect = "Allow"
         Action = [
-          "eks:*"
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:ListSecrets",
+          "secretsmanager:GetResourcePolicy",
+          "secretsmanager:CreateSecret",
+          "secretsmanager:DeleteSecret",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:TagResource",
+          "secretsmanager:UpdateSecret"
         ]
         Resource = "*"
       },
@@ -158,7 +197,22 @@ resource "aws_iam_role_policy" "terraform_infra" {
           "iam:CreateOpenIDConnectProvider",
           "iam:DeleteOpenIDConnectProvider",
           "iam:GetOpenIDConnectProvider",
-          "iam:TagOpenIDConnectProvider"
+          "iam:TagOpenIDConnectProvider",
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "STSRead"
+        Effect = "Allow"
+        Action = [
+          "sts:GetCallerIdentity"
         ]
         Resource = "*"
       }
