@@ -55,3 +55,4 @@ module "secrets" {
   project = var.project
   env     = var.env
 }
+# tested CI pipeline
