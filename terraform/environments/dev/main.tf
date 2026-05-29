@@ -39,7 +39,7 @@ module "iam" {
   project         = var.project
   env             = var.env
   github_username = var.github_username
-  github_repo     = "gitflow-analyzer"
+  github_repo     = "GitFlow"
   aws_account_id  = var.aws_account_id
 }
 
