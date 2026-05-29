@@ -1,0 +1,22 @@
+# Python virtual environment — never include this
+# It contains binaries compiled for your local OS, not the container OS
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Local environment file — contains secrets
+.env
+
+# Git history — not needed in the container
+.git/
+.gitignore
+
+# Docker files themselves — no need to copy these into the image
+Dockerfile
+.dockerignore
+
+# Local development artifacts
+*.log
+.DS_Store

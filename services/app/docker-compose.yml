@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # context: . means Docker looks for files relative to this directory
+      # dockerfile: Dockerfile specifies which Dockerfile to use
+
+    image: gitflow-analyzer:local
+    # Tag the locally built image as gitflow-analyzer:local
+    # This distinguishes it from the ECR-hosted images
+
+    container_name: gitflow-analyzer-app
+    # Give the container a predictable name so you can reference it
+    # with: docker logs gitflow-analyzer-app
+
+    ports:
+      - "5000:5000"
+      # Maps port 5000 on your machine to port 5000 in the container
+      # Format is HOST:CONTAINER
+      # After starting, the app is reachable at http://localhost:5000
+
+    environment:
+      - FLASK_ENV=development
+      - PORT=5000
+      - AWS_REGION=${AWS_REGION:-eu-west-1}
+      - PROJECT_NAME=${PROJECT_NAME:-gitflow-analyzer}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      # ${VAR:-default} syntax means: use the env var if set,
+      # otherwise fall back to the default value.
+      # This means docker-compose works without a .env file
+      # but also respects your .env values if present.
+
+      # For local development without AWS Secrets Manager:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # If GITHUB_TOKEN is set in your .env file, it is passed through
+      # to the container. The app checks for this before calling
+      # Secrets Manager, so you can develop locally without AWS.
+
+    env_file:
+      - .env
+      # Loads all variables from .env into the container.
+      # The .env file is gitignored so secrets stay local.
+      # If the file doesn't exist, docker-compose ignores this line.
+
+    restart: unless-stopped
+    # Restart the container automatically if it crashes.
+    # unless-stopped means it won't restart if you manually stop it.
+    # This is the correct policy for a production service.
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+      # Same health check as the Dockerfile but defined here too
+      # so docker-compose ps shows the health status
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+      # Limit log file size to prevent the EC2 disk from filling up
+      # max-size: each log file is max 10MB
+      # max-file: keep at most 3 rotated log files
+      # Total max log storage: 30MB per container
