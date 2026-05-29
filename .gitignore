@@ -19,3 +19,10 @@
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
