@@ -12,3 +12,8 @@ output "github_actions_role_arn" {
   description = "Paste this into your GitHub Actions workflow"
   value       = module.iam.github_actions_role_arn
 }
+
+output "ecr_repository_urls" {
+  description = "ECR repository URLs for all services"
+  value       = module.ecr.repository_urls
+}

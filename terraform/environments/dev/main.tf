@@ -42,3 +42,10 @@ module "iam" {
   github_repo     = "gitflow-analyzer"
   aws_account_id  = var.aws_account_id
 }
+
+module "ecr" {
+  source  = "../../modules/ecr"
+  project = var.project
+  # services and image_retention_count use the defaults defined in the module.
+  # You only override them here if you need different values for this environment.
+}
