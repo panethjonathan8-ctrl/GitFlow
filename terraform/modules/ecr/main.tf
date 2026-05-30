@@ -11,7 +11,7 @@ resource "aws_ecr_repository" "services" {
   # The slash creates a logical namespace in the ECR console
   # making it easy to see all repos belonging to this project.
 
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   # IMMUTABLE means once you push an image with a tag like "abc123",
   # you cannot overwrite it with a different image using the same tag.
   # This is critical for traceability — if something breaks in production
