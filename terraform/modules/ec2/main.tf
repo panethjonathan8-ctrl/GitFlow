@@ -155,12 +155,10 @@ resource "aws_security_group" "ec2" {
 # ── SSH key pair ───────────────────────────────────────────────────────────────
 resource "aws_key_pair" "ec2" {
   key_name   = "${var.project}-${var.env}-key"
-  public_key = file("~/.ssh/${var.project}-${var.env}.pub")
-  # Reads your public key from ~/.ssh/
-  # The private key stays on your machine — AWS only gets the public key.
-  # You will create this key pair in Step 5 before running terraform apply.
+  public_key = var.ec2_public_key
+  # Key content passed in as a variable instead of read from a file.
+  # This works both locally and in CI.
 }
-
 # ── EC2 instance ──────────────────────────────────────────────────────────────
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id

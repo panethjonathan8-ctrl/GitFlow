@@ -204,7 +204,15 @@ resource "aws_iam_role_policy" "terraform_infra" {
           "iam:GetPolicyVersion",
           "iam:ListPolicyVersions",
           "iam:CreatePolicyVersion",
-          "iam:DeletePolicyVersion"
+          "iam:DeletePolicyVersion",
+          "iam:GetInstanceProfile",
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagInstanceProfile",
+          "iam:ListInstanceProfilesForRole",
+          "iam:ListInstanceProfiles"
         ]
         Resource = "*"
       },

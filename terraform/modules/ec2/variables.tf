@@ -57,3 +57,9 @@ variable "allowed_cidr_blocks" {
   # In production you would restrict this to your office IP or put an
   # ALB in front and only allow traffic from the ALB.
 }
+
+variable "ec2_public_key" {
+  description = "SSH public key content for EC2 access"
+  type        = string
+}
+

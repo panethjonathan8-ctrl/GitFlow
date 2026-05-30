@@ -65,5 +65,6 @@ module "ec2" {
   aws_region   = var.aws_region
   ecr_registry = var.ecr_registry
   ecr_repo     = var.ecr_repo
+  ec2_public_key = var.ec2_public_key
   # instance_type and allowed_cidr_blocks use module defaults
 }

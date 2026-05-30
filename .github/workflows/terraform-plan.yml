@@ -39,7 +39,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           # This is the OIDC exchange you set up on Day 3.
-          # GitHub sends a JWT token to AWS, AWS verifies it against
+          # GitHub sends a JWT tken to AWS, AWS verifies it against
           # the OIDC provider you created, and returns temporary credentials.
           # No secrets are used here — just the role ARN which is not sensitive.
 
@@ -81,6 +81,7 @@ jobs:
         env:
           TF_VAR_aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
           TF_VAR_github_username: ${{ vars.THE_USERNAME }}
+          TF_VAR_ec2_public_key: ${{ vars.EC2_PUBLIC_KEY }}
           # TF_VAR_ prefix is how you pass Terraform variables from
           # environment variables. This keeps the values out of your
           # tfvars files in CI while still being available to Terraform.
@@ -121,7 +122,10 @@ jobs:
           # changes will happen before approving the merge.
 
       - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+        if: steps.plan.outcome == 'failure'        
+        run: |
+          echo "Terraform plan failed — check the plan output above for errors"
+          exit 1
+        
         # If the plan failed, fail the workflow so the PR is blocked.
         # This prevents merging broken infrastructure changes.

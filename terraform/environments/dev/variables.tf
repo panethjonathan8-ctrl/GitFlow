@@ -37,3 +37,8 @@ variable "ecr_repo" {
   type        = string
   default     = "153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/analyzer"
 }
+
+variable "ec2_public_key" {
+  description = "SSH public key content for EC2 access"
+  type        = string
+}
