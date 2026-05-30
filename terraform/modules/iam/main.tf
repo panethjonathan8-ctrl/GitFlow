@@ -227,3 +227,40 @@ resource "aws_iam_role_policy" "terraform_infra" {
     ]
   })
 }
+
+# ── Policy: SSM for EC2 remote commands ───────────────────────────────────────
+resource "aws_iam_role_policy" "ssm" {
+  name = "ssm-ec2-commands"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "SSMSendCommand"
+        Effect = "Allow"
+        Action = [
+          "ssm:SendCommand",
+          "ssm:GetCommandInvocation",
+          "ssm:ListCommandInvocations",
+          "ssm:DescribeInstanceInformation"
+        ]
+        Resource = "*"
+        # SSM SendCommand lets GitHub Actions run a shell command
+        # on the EC2 instance without SSH keys or open port 22.
+        # The command runs as if you typed it directly on the instance.
+      },
+      {
+        Sid    = "EC2Describe"
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus"
+        ]
+        Resource = "*"
+        # Needed to find the instance ID by its tags
+        # so the workflow knows which instance to deploy to.
+      }
+    ]
+  })
+}

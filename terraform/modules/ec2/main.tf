@@ -94,6 +94,16 @@ resource "aws_iam_role_policy" "secrets" {
   })
 }
 
+# ── Policy: allow SSM agent to communicate with AWS ───────────────────────────
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  # This AWS managed policy gives the instance everything it needs
+  # to communicate with the SSM service.
+  # Without this the SSM agent on the instance cannot register itself
+  # and remote commands will never arrive.
+}
+
 # ── Instance profile ───────────────────────────────────────────────────────────
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.project}-${var.env}-ec2-profile"

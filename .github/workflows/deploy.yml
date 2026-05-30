@@ -1,0 +1,171 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      # Only triggers when files inside services/ change.
+      # If you only changed Terraform or docs, this workflow is skipped.
+      # This saves CI minutes and prevents unnecessary deployments.
+
+permissions:
+  id-token: write
+  contents: read
+  # id-token: write is required for OIDC authentication to AWS.
+
+jobs:
+  build-and-deploy:
+    name: Build, Push, Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # ── Build and push Docker image ─────────────────────────────────────────
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        # This action authenticates Docker to ECR using the OIDC credentials.
+        # It runs: aws ecr get-login-password | docker login
+        # You do not need to write this command yourself.
+
+      - name: Set image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ vars.ECR_REPO_ANALYZER }}:$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "image_latest=${{ vars.ECR_REPO_ANALYZER }}:latest" >> $GITHUB_OUTPUT
+          echo "Building image with tag: $SHORT_SHA"
+        # github.sha is the full 40-character commit SHA.
+        # We cut it to 7 characters — enough to be unique, short enough to be readable.
+        # GITHUB_OUTPUT is how you pass values between steps in a workflow.
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag ${{ steps.tag.outputs.image_tag }} \
+            --tag ${{ steps.tag.outputs.image_latest }} \
+            --label "git-sha=${{ github.sha }}" \
+            --label "built-by=github-actions" \
+            --label "build-date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            services/app/
+        # Build from the services/app/ directory.
+        # We tag with both the SHA and latest.
+        # Labels are metadata embedded in the image — useful for auditing
+        # which commit an image was built from.
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ steps.tag.outputs.image_tag }}
+          docker push ${{ steps.tag.outputs.image_latest }}
+          echo "Pushed image: ${{ steps.tag.outputs.image_tag }}"
+          echo "Pushed image: ${{ steps.tag.outputs.image_latest }}"
+
+      # ── Deploy to EC2 via SSM ───────────────────────────────────────────────
+
+      - name: Deploy to EC2 via SSM
+        id: deploy
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "echo \"=== Starting deployment ===\"",
+              "echo \"Image: ${{ steps.tag.outputs.image_tag }}\"",
+              "cd /opt/gitflow-analyzer",
+              "aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin ${{ vars.ECR_REGISTRY }}",
+              "docker-compose pull",
+              "docker-compose up -d",
+              "echo \"=== Deployment complete ===\"",
+              "docker ps"
+            ]' \
+            --region "${{ vars.AWS_REGION }}" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+          echo "SSM command sent: $COMMAND_ID"
+        # aws ssm send-command runs a shell script on the EC2 instance.
+        # AWS-RunShellScript is a built-in SSM document that runs bash commands.
+        # The command ID is saved so the next step can check if it succeeded.
+
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for SSM command to complete..."
+          aws ssm wait command-executed \
+            --command-id "${{ steps.deploy.outputs.command_id }}" \
+            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --region "${{ vars.AWS_REGION }}"
+          # wait command-executed blocks until the SSM command finishes.
+          # If the command fails on the instance, this step fails too
+          # which means the workflow correctly reports a failed deployment.
+
+      - name: Get deployment output
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "${{ steps.deploy.outputs.command_id }}" \
+            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --region "${{ vars.AWS_REGION }}" \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output json
+          # Fetches and prints the full output of the commands that ran on EC2.
+          # This shows you exactly what happened during deployment
+          # so you can debug if something went wrong.
+
+      # ── Health check ────────────────────────────────────────────────────────
+
+      - name: Health check
+        run: |
+          echo "Waiting 15 seconds for container to start..."
+          sleep 15
+
+          EC2_IP=$(aws ec2 describe-instances \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --region "${{ vars.AWS_REGION }}" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+
+          echo "EC2 IP: $EC2_IP"
+          echo "Checking health endpoint..."
+
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$EC2_IP:5000/health)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed — app is running"
+              exit 0
+            fi
+            echo "Attempt $i failed with status $STATUS — retrying in 10s"
+            sleep 10
+          done
+
+          echo "Health check failed after 3 attempts"
+          exit 1
+        # Tries the health endpoint 3 times with 10 second gaps.
+        # If the app is not responding after 3 attempts the deployment
+        # is marked as failed so you know something went wrong.
+
+      - name: Print deployment summary
+        if: success()
+        run: |
+          EC2_IP=$(aws ec2 describe-instances \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --region "${{ vars.AWS_REGION }}" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+
+          echo "================================"
+          echo "Deployment successful"
+          echo "Image: ${{ steps.tag.outputs.image_tag }}"
+          echo "API URL: http://$EC2_IP:5000"
+          echo "Health: http://$EC2_IP:5000/health"
+          echo "================================"
