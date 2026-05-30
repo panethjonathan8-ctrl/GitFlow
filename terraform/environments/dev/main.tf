@@ -57,14 +57,14 @@ module "secrets" {
 }
 
 module "ec2" {
-  source       = "../../modules/ec2"
-  project      = var.project
-  env          = var.env
-  vpc_id       = module.vpc.vpc_id
-  subnet_id    = module.vpc.public_subnet_ids[0]
-  aws_region   = var.aws_region
-  ecr_registry = var.ecr_registry
-  ecr_repo     = var.ecr_repo
+  source         = "../../modules/ec2"
+  project        = var.project
+  env            = var.env
+  vpc_id         = module.vpc.vpc_id
+  subnet_id      = module.vpc.public_subnet_ids[0]
+  aws_region     = var.aws_region
+  ecr_registry   = var.ecr_registry
+  ecr_repo       = var.ecr_repo
   ec2_public_key = var.ec2_public_key
   # instance_type and allowed_cidr_blocks use module defaults
 }
