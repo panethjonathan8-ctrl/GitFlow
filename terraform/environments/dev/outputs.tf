@@ -22,3 +22,13 @@ output "secret_arns" {
   description = "Secret ARNs"
   value       = module.secrets.secret_arns
 }
+
+output "api_url" {
+  description = "URL to reach the API"
+  value       = module.ec2.api_url
+}
+
+output "ssh_command" {
+  description = "SSH into the instance"
+  value       = module.ec2.ssh_command
+}

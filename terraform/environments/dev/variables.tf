@@ -25,3 +25,15 @@ variable "github_username" {
   description = "Your GitHub username"
   type        = string
 }
+
+variable "ecr_registry" {
+  description = "ECR registry URL"
+  type        = string
+  default     = "153772056450.dkr.ecr.eu-west-1.amazonaws.com"
+}
+
+variable "ecr_repo" {
+  description = "ECR repository URL for the analyzer image"
+  type        = string
+  default     = "153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/analyzer"
+}
