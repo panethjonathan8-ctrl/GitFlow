@@ -32,3 +32,8 @@ output "ssh_command" {
   description = "SSH into the instance"
   value       = module.ec2.ssh_command
 }
+
+output "instance_id" {
+  description = "EC2 instance ID"
+  value       = module.ec2.instance_id
+}
