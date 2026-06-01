@@ -217,3 +217,14 @@ resource "aws_instance" "app" {
     ignore_changes = [ami, user_data]
   }
 }
+
+resource "aws_eip" "app" {
+  instance = aws_instance.app.id
+  domain   = "vpc"
+
+  tags = {
+    Name        = "${var.project}-${var.env}-eip"
+    Project     = var.project
+    Environment = var.env
+  }
+}
