@@ -60,9 +60,9 @@ resource "aws_iam_role_policy" "ecr" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "ECRAuth"
-        Effect = "Allow"
-        Action = ["ecr:GetAuthorizationToken"]
+        Sid      = "ECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
         # GetAuthorizationToken cannot be scoped to a specific repo —
         # it must be * because it returns a token for the whole registry.

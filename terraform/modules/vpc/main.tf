@@ -11,7 +11,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
   # DNS hostnames must be on so EC2 instances get a public DNS name.
   # Without this, connecting to your instance by hostname won't work.
-  enable_dns_support   = true
+  enable_dns_support = true
 
   tags = {
     Name        = "${var.project}-${var.env}"
