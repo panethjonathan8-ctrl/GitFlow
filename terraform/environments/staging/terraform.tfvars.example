@@ -1,0 +1,8 @@
+aws_region      = "eu-west-1"
+project         = "gitflow-analyzer"
+env             = "staging"
+aws_account_id  = "YOUR_ACCOUNT_ID"
+github_username = "YOUR_GITHUB_USERNAME"
+ec2_public_key  = "YOUR_SSH_PUBLIC_KEY"
+ecr_registry    = "YOUR_ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com"
+ecr_repo        = "YOUR_ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/analyzer"
