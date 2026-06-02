@@ -25,3 +25,10 @@ variable "aws_account_id" {
   description = "AWS account ID"
   type        = string
 }
+
+variable "create_oidc_provider" {
+  description = "Set to false if the OIDC provider already exists from another environment"
+  type        = bool
+  default     = true
+}
+
