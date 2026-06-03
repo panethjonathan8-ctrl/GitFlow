@@ -14,7 +14,6 @@ SPECIFIC_TAG=$2
 REGION="eu-west-1"
 BUCKET="gitflow-analyzer-tfstate-153772056450"
 ECR_REGISTRY="153772056450.dkr.ecr.eu-west-1.amazonaws.com"
-ECR_REPO="$ECR_REGISTRY/gitflow-analyzer/analyzer"
 TRACKING_KEY="deployments/${ENVIRONMENT}/history.json"
 
 echo "=== GitFlow Analyzer Rollback ==="
@@ -39,24 +38,21 @@ echo ""
 
 # ── Determine which image tag to roll back to ─────────────────────────────────
 if [ -n "$SPECIFIC_TAG" ]; then
-  # User specified an exact tag
   ROLLBACK_TAG="$SPECIFIC_TAG"
   echo "Rolling back to specified tag: $ROLLBACK_TAG"
 else
-  # No tag specified — find the previous deployment from history
   echo "No tag specified — finding previous deployment..."
 
   HISTORY=$(aws s3 cp "s3://$BUCKET/$TRACKING_KEY" - 2>/dev/null || echo "[]")
 
   ROLLBACK_TAG=$(python3 << PYTHON
-import json, sys
+import json
 
 history = json.loads('''$HISTORY''')
 
 if len(history) < 2:
   print("NONE")
 else:
-  # index 0 is current, index 1 is previous
   print(history[1].get('image_tag', 'NONE'))
 PYTHON
 )
@@ -64,38 +60,33 @@ PYTHON
   if [ "$ROLLBACK_TAG" = "NONE" ]; then
     echo "ERROR: No previous deployment found in history"
     echo "Run ./scripts/deployment-history.sh $ENVIRONMENT to see available versions"
-    echo "Then run ./scripts/rollback.sh $ENVIRONMENT <specific_tag>"
+    echo "Then run: ./scripts/rollback.sh $ENVIRONMENT <specific_tag>"
     exit 1
   fi
 
   echo "Rolling back to previous deployment: $ROLLBACK_TAG"
 fi
 
-# ── Confirm the image tag exists in ECR ──────────────────────────────────────
+# ── Verify all three images exist in ECR ─────────────────────────────────────
 echo ""
-echo "Verifying image exists in ECR..."
-IMAGE_EXISTS=$(aws ecr describe-images \
-  --repository-name gitflow-analyzer/analyzer \
-  --image-ids imageTag=$ROLLBACK_TAG \
-  --region "$REGION" \
-  --query "imageDetails[0].imageTags[0]" \
-  --output text 2>/dev/null || echo "NOT_FOUND")
-
-if [ "$IMAGE_EXISTS" = "NOT_FOUND" ] || [ "$IMAGE_EXISTS" = "None" ]; then
-  echo "ERROR: Image tag '$ROLLBACK_TAG' not found in ECR"
-  echo "Available tags:"
-  aws ecr describe-images \
-    --repository-name gitflow-analyzer/analyzer \
+echo "Verifying images exist in ECR..."
+for REPO in gitflow-analyzer/analyzer gitflow-analyzer/graph-builder gitflow-analyzer/result-api; do
+  STATUS=$(aws ecr describe-images \
+    --repository-name "$REPO" \
+    --image-ids imageTag="$ROLLBACK_TAG" \
     --region "$REGION" \
-    --query "imageDetails[*].imageTags" \
-    --output text
-  exit 1
-fi
+    --query "imageDetails[0].imageTags[0]" \
+    --output text 2>/dev/null || echo "NOT_FOUND")
 
-echo "Image verified: $ECR_REPO:$ROLLBACK_TAG"
-echo ""
+  if [ "$STATUS" = "NOT_FOUND" ] || [ "$STATUS" = "None" ]; then
+    echo "ERROR: Tag '$ROLLBACK_TAG' not found in ECR repo '$REPO'"
+    exit 1
+  fi
+  echo "Verified: $REPO:$ROLLBACK_TAG"
+done
 
 # ── Check SSM connectivity ────────────────────────────────────────────────────
+echo ""
 echo "Checking SSM connectivity..."
 SSM_STATUS=$(aws ssm describe-instance-information \
   --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
@@ -110,18 +101,24 @@ fi
 echo "SSM status: Online"
 echo ""
 
-# ── Deploy the rollback image ─────────────────────────────────────────────────
-echo "Deploying rollback image: $ROLLBACK_TAG"
+# ── Deploy the rollback ───────────────────────────────────────────────────────
+echo "Deploying rollback to: $ROLLBACK_TAG"
 COMMAND_ID=$(aws ssm send-command \
   --instance-ids "$INSTANCE_ID" \
   --document-name "AWS-RunShellScript" \
   --parameters "commands=[
-    \"echo === Rolling back to $ROLLBACK_TAG ===\",
-    \"cd /opt/gitflow-analyzer\",
+    \"set -e\",
+    \"echo === Rolling back $ENVIRONMENT to $ROLLBACK_TAG ===\",
+    \"docker stop analyzer graph-builder result-api 2>/dev/null || true\",
+    \"docker rm analyzer graph-builder result-api 2>/dev/null || true\",
+    \"docker network create gitflow-net 2>/dev/null || true\",
     \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REGISTRY\",
-    \"docker pull $ECR_REPO:$ROLLBACK_TAG\",
-    \"docker tag $ECR_REPO:$ROLLBACK_TAG $ECR_REPO:latest\",
-    \"docker-compose up -d\",
+    \"docker pull $ECR_REGISTRY/gitflow-analyzer/analyzer:$ROLLBACK_TAG\",
+    \"docker pull $ECR_REGISTRY/gitflow-analyzer/graph-builder:$ROLLBACK_TAG\",
+    \"docker pull $ECR_REGISTRY/gitflow-analyzer/result-api:$ROLLBACK_TAG\",
+    \"docker run -d --name analyzer --network gitflow-net -p 5001:5001 -e PORT=5001 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=$ENVIRONMENT -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $ECR_REGISTRY/gitflow-analyzer/analyzer:$ROLLBACK_TAG\",
+    \"docker run -d --name graph-builder --network gitflow-net -p 5002:5002 -e PORT=5002 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=$ENVIRONMENT -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $ECR_REGISTRY/gitflow-analyzer/graph-builder:$ROLLBACK_TAG\",
+    \"docker run -d --name result-api --network gitflow-net -p 5000:5000 -e PORT=5000 -e ANALYZER_URL=http://analyzer:5001 -e GRAPH_BUILDER_URL=http://graph-builder:5002 --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $ECR_REGISTRY/gitflow-analyzer/result-api:$ROLLBACK_TAG\",
     \"echo === Rollback complete ===\",
     \"docker ps\"
   ]" \
@@ -160,11 +157,12 @@ for i in 1 2 3; do
     echo "Rolled back to: $ROLLBACK_TAG"
     echo "API URL: $API_URL"
 
-    # Record the rollback as a deployment
-    ~/GitFlow/scripts/track-deployment.sh \
+    python3 ~/GitFlow/scripts/record-deployment.py \
       "$ENVIRONMENT" \
       "$ROLLBACK_TAG" \
-      "$ROLLBACK_TAG"
+      "$ROLLBACK_TAG" \
+      "$(git config user.name 2>/dev/null || echo 'manual')" \
+      "$REGION"
 
     exit 0
   fi
