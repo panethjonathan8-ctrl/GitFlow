@@ -232,3 +232,52 @@ jobs:
           echo "Image tag: ${{ needs.build.outputs.image_tag }}"
           echo "Dev URL: http://108.131.187.89:5000"
           echo "================================"
+
+  deploy-eks:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.17.0'
+
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name gitflow-analyzer-dev \
+            --region ${{ vars.AWS_REGION }}
+
+      - name: Deploy to EKS via Helm
+        run: |
+          helm upgrade --install gitflow-analyzer ./k8s/helm/gitflow-analyzer \
+            --namespace gitflow-analyzer \
+            --create-namespace \
+            --set image.tag=${{ needs.build.outputs.image_tag }} \
+            --set image.pullPolicy=Always \
+            --wait \
+            --timeout 5m
+
+      - name: Verify pods are running
+        run: kubectl get pods -n gitflow-analyzer
+
+      - name: Print EKS deployment summary
+        if: success()
+        run: |
+          echo "================================"
+          echo "EKS deployment successful"
+          echo "Image tag: ${{ needs.build.outputs.image_tag }}"
+          echo "Cluster: gitflow-analyzer-dev"
+          echo "Namespace: gitflow-analyzer"
+          echo "================================"
