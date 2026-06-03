@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   backend "s3" {
@@ -67,4 +71,15 @@ module "ec2" {
   ecr_repo       = var.ecr_repo
   ec2_public_key = var.ec2_public_key
   # instance_type and allowed_cidr_blocks use module defaults
+}
+
+module "eks" {
+  source       = "../../modules/eks"
+  project      = var.project
+  env          = var.env
+  vpc_id       = module.vpc.vpc_id
+  subnet_ids   = module.vpc.public_subnet_ids
+  desired_size = 1
+  max_size     = 2
+  # cluster_version, instance_types, min_size, capacity_type use module defaults
 }

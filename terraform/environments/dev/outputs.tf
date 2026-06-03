@@ -37,3 +37,18 @@ output "instance_id" {
   description = "EC2 instance ID"
   value       = module.ec2.instance_id
 }
+
+output "eks_cluster_name" {
+  description = "EKS cluster name — used in aws eks update-kubeconfig"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "EKS API server endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_oidc_provider_arn" {
+  description = "OIDC provider ARN — needed for IRSA (pod-level IAM roles)"
+  value       = module.eks.oidc_provider_arn
+}
