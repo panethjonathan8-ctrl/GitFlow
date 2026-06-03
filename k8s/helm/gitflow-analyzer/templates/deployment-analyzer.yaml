@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analyzer
+  labels:
+    app.kubernetes.io/name: analyzer
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.analyzer.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: analyzer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: analyzer
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ include "gitflow-analyzer.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+      containers:
+        - name: analyzer
+          image: "{{ .Values.analyzer.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.analyzer.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "gitflow-analyzer.fullname" . }}-analyzer
+          resources:
+            {{- toYaml .Values.analyzer.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.analyzer.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.analyzer.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3

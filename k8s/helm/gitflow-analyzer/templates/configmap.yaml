@@ -1,0 +1,38 @@
+---
+# ConfigMap for the analyzer service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitflow-analyzer.fullname" . }}-analyzer
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.analyzer.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+
+---
+# ConfigMap for the graph-builder service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitflow-analyzer.fullname" . }}-graph-builder
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.graphBuilder.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+
+---
+# ConfigMap for the result-api service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitflow-analyzer.fullname" . }}-result-api
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.resultApi.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

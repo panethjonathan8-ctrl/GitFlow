@@ -1,0 +1,113 @@
+# ── Shared image settings ─────────────────────────────────────────────────────
+image:
+  tag: latest
+  # Overridden per-deploy: helm upgrade --set image.tag=<git-sha>
+  pullPolicy: IfNotPresent
+  # IfNotPresent means the node only pulls if that exact tag is not cached.
+  # Use Always when you push to the :latest tag so nodes always re-pull.
+
+# ── Service Account ───────────────────────────────────────────────────────────
+serviceAccount:
+  name: gitflow-analyzer
+  annotations: {}
+  # When running on EKS, add the IRSA role ARN here:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-dev-app-role
+  # This tells EKS to inject temporary AWS credentials into pods using this
+  # service account, replacing the need for node-level IAM permissions.
+  # Leave empty for now — it has no effect until you are on EKS.
+
+# ── Analyzer ──────────────────────────────────────────────────────────────────
+analyzer:
+  replicaCount: 1
+  image:
+    repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/analyzer
+  port: 5001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    # analyzer clones full repos and walks directory trees — it is CPU and
+    # memory heavy compared to the other two services.
+  env:
+    PROJECT_NAME: gitflow-analyzer
+    ENVIRONMENT: dev
+    AWS_REGION: eu-west-1
+    PORT: "5001"
+    GIT_PYTHON_REFRESH: quiet
+    # GIT_PYTHON_REFRESH=quiet suppresses GitPython's warning about missing
+    # git configuration, which pollutes logs in a container environment.
+
+# ── Graph Builder ─────────────────────────────────────────────────────────────
+graphBuilder:
+  replicaCount: 1
+  image:
+    repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/graph-builder
+  port: 5002
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    PROJECT_NAME: gitflow-analyzer
+    ENVIRONMENT: dev
+    AWS_REGION: eu-west-1
+    PORT: "5002"
+    GIT_PYTHON_REFRESH: quiet
+
+# ── Result API ────────────────────────────────────────────────────────────────
+resultApi:
+  replicaCount: 1
+  image:
+    repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/result-api
+  port: 5000
+  service:
+    type: ClusterIP
+    # ClusterIP: only reachable inside the cluster — use with an Ingress.
+    # LoadBalancer: provisions an AWS NLB, reachable from the internet.
+    #   Use LoadBalancer for quick smoke testing before the ingress controller
+    #   is set up. Switch back to ClusterIP once ingress is working.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    # result-api is a thin orchestrator — it only calls the other two services
+    # and merges the responses. Very low resource footprint.
+  env:
+    ANALYZER_URL: "http://analyzer:5001"
+    GRAPH_BUILDER_URL: "http://graph-builder:5002"
+    PORT: "5000"
+    # These URLs work because Kubernetes creates a DNS entry for every Service.
+    # When result-api calls http://analyzer:5001, CoreDNS resolves "analyzer"
+    # to the ClusterIP of the analyzer Service automatically.
+
+# ── HPA ───────────────────────────────────────────────────────────────────────
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  # Disabled by default — requires the Kubernetes Metrics Server to be installed.
+  # Enable after the Metrics Server add-on is added to the EKS cluster.
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: alb
+  # alb = AWS Load Balancer Controller, which must be installed in the cluster.
+  # The controller watches for Ingress resources and creates an ALB automatically.
+  host: ""
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+  # Disabled by default — enable after the AWS Load Balancer Controller is
+  # installed in the cluster (that is Week 4 work).

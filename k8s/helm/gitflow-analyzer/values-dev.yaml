@@ -1,0 +1,15 @@
+# Dev-environment overrides.
+# Apply with: helm upgrade --install gitflow-analyzer . -f values.yaml -f values-dev.yaml
+
+analyzer:
+  env:
+    ENVIRONMENT: dev
+
+graphBuilder:
+  env:
+    ENVIRONMENT: dev
+
+# serviceAccount.annotations will be populated after the IRSA role is created:
+#   serviceAccount:
+#     annotations:
+#       eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-dev-app-role
