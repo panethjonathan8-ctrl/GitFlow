@@ -65,6 +65,15 @@ jobs:
           docker push "$IMAGE_LATEST"
           echo "Pushed: $IMAGE_SHA"
 
+      - name: Build and push frontend
+        run: |
+          IMAGE_SHA="${{ vars.ECR_REGISTRY }}/gitflow-analyzer/frontend:${{ steps.tag.outputs.short_sha }}"
+          IMAGE_LATEST="${{ vars.ECR_REGISTRY }}/gitflow-analyzer/frontend:latest"
+          docker build --tag "$IMAGE_SHA" --tag "$IMAGE_LATEST" services/frontend/
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_LATEST"
+          echo "Pushed: $IMAGE_SHA"
+
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
