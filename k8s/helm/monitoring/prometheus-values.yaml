@@ -1,0 +1,23 @@
+server:
+  resources:
+    requests:
+      memory: 200Mi
+      cpu: 100m
+    limits:
+      memory: 400Mi
+      cpu: 300m
+  retention: "7d"
+  persistentVolume:
+    enabled: false
+
+alertmanager:
+  enabled: false
+
+pushgateway:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
