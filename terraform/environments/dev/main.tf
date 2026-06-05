@@ -10,6 +10,14 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {
@@ -27,6 +35,26 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+}
+
+data "aws_eks_cluster_auth" "main" {
+  name = module.eks.cluster_name
+  # Gets a short-lived (15 min) auth token using your existing AWS credentials.
+  # This is the same token kubectl uses — no extra IAM permissions needed.
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+    token                  = data.aws_eks_cluster_auth.main.token
+  }
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+  token                  = data.aws_eks_cluster_auth.main.token
 }
 
 module "vpc" {
@@ -81,4 +109,15 @@ module "eks" {
   desired_size = 1
   max_size     = 2
   # cluster_version, instance_types, min_size, capacity_type use module defaults
+}
+
+module "argocd" {
+  source       = "../../modules/argocd"
+  project      = var.project
+  env          = var.env
+  cluster_name = module.eks.cluster_name
+
+  depends_on = [module.eks]
+  # ArgoCD can only be installed after the cluster and node group are fully
+  # ready — depends_on enforces that order.
 }
