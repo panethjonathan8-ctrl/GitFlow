@@ -175,18 +175,32 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
+      - name: Check if EKS cluster exists
+        id: eks-check
+        run: |
+          if aws eks describe-cluster --name gitflow-analyzer-dev --region ${{ vars.AWS_REGION }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "EKS cluster found — proceeding with deploy"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "EKS cluster not found — skipping deploy"
+          fi
+
       - name: Install Helm
+        if: steps.eks-check.outputs.exists == 'true'
         uses: azure/setup-helm@v4
         with:
           version: '3.17.0'
 
       - name: Configure kubectl for EKS
+        if: steps.eks-check.outputs.exists == 'true'
         run: |
           aws eks update-kubeconfig \
             --name gitflow-analyzer-dev \
             --region ${{ vars.AWS_REGION }}
 
       - name: Deploy to EKS via Helm
+        if: steps.eks-check.outputs.exists == 'true'
         run: |
           helm upgrade --install gitflow-analyzer ./k8s/helm/gitflow-analyzer \
             --namespace gitflow-analyzer \
@@ -197,10 +211,11 @@ jobs:
             --timeout 5m
 
       - name: Verify pods are running
+        if: steps.eks-check.outputs.exists == 'true'
         run: kubectl get pods -n gitflow-analyzer
 
       - name: Print EKS deployment summary
-        if: success()
+        if: steps.eks-check.outputs.exists == 'true'
         run: |
           echo "================================"
           echo "EKS deployment successful"
