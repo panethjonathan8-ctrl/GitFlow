@@ -9,8 +9,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: #0d1117;
-      color: #c9d1d9;
+      background: #0f0f0f;
+      color: #d4d4d4;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       height: 100vh;
       display: flex;
@@ -18,8 +18,8 @@
     }
 
     header {
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
+      background: #141414;
+      border-bottom: 1px solid #252525;
       padding: 12px 20px;
       display: flex;
       align-items: center;
@@ -30,16 +30,16 @@
     header h1 {
       font-size: 18px;
       font-weight: 600;
-      color: #f0f6fc;
+      color: #e4e4e4;
     }
 
     header span {
       font-size: 12px;
-      color: #8b949e;
-      background: #21262d;
+      color: #666666;
+      background: #1e1e1e;
       padding: 2px 8px;
       border-radius: 12px;
-      border: 1px solid #30363d;
+      border: 1px solid #333333;
     }
 
     .layout {
@@ -50,8 +50,8 @@
 
     .sidebar {
       width: 320px;
-      background: #161b22;
-      border-right: 1px solid #30363d;
+      background: #141414;
+      border-right: 1px solid #252525;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
@@ -60,13 +60,13 @@
 
     .sidebar-section {
       padding: 16px;
-      border-bottom: 1px solid #21262d;
+      border-bottom: 1px solid #1e1e1e;
     }
 
     .sidebar-section h2 {
       font-size: 12px;
       font-weight: 600;
-      color: #8b949e;
+      color: #555555;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 12px;
@@ -79,10 +79,10 @@
     }
 
     input[type="text"] {
-      background: #0d1117;
-      border: 1px solid #30363d;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
       border-radius: 6px;
-      color: #c9d1d9;
+      color: #d4d4d4;
       font-size: 13px;
       padding: 8px 12px;
       width: 100%;
@@ -91,16 +91,16 @@
     }
 
     input[type="text"]:focus {
-      border-color: #388bfd;
+      border-color: #7c3aed;
     }
 
-    input[type="text"]::placeholder { color: #484f58; }
+    input[type="text"]::placeholder { color: #444444; }
 
     button {
-      background: #238636;
-      border: 1px solid #2ea043;
+      background: #5b21b6;
+      border: 1px solid #7c3aed;
       border-radius: 6px;
-      color: #fff;
+      color: #e4e4e4;
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
@@ -109,14 +109,14 @@
       width: 100%;
     }
 
-    button:hover { background: #2ea043; }
-    button:disabled { background: #21262d; border-color: #30363d; color: #484f58; cursor: not-allowed; }
+    button:hover { background: #7c3aed; }
+    button:disabled { background: #1e1e1e; border-color: #2a2a2a; color: #444444; cursor: not-allowed; }
 
     .spinner {
       display: none;
       text-align: center;
       padding: 8px;
-      color: #8b949e;
+      color: #666666;
       font-size: 13px;
     }
 
@@ -143,8 +143,8 @@
       font-size: 13px;
     }
 
-    .stat-label { color: #8b949e; }
-    .stat-value { color: #f0f6fc; font-weight: 500; }
+    .stat-label { color: #666666; }
+    .stat-value { color: #e4e4e4; font-weight: 500; }
 
     .lang-bar {
       display: flex;
@@ -152,7 +152,7 @@
       border-radius: 3px;
       overflow: hidden;
       margin: 8px 0;
-      background: #21262d;
+      background: #1e1e1e;
     }
 
     .lang-bar-fill {
@@ -177,8 +177,8 @@
       flex-shrink: 0;
     }
 
-    .lang-name { color: #c9d1d9; flex: 1; }
-    .lang-pct { color: #8b949e; }
+    .lang-name { color: #d4d4d4; flex: 1; }
+    .lang-pct { color: #666666; }
 
     .framework-list {
       display: flex;
@@ -187,16 +187,16 @@
     }
 
     .badge {
-      background: #1f3a5f;
-      border: 1px solid #388bfd40;
+      background: #2e1065;
+      border: 1px solid #7c3aed40;
       border-radius: 12px;
-      color: #79c0ff;
+      color: #a78bfa;
       font-size: 11px;
       padding: 2px 10px;
     }
 
     .empty {
-      color: #484f58;
+      color: #444444;
       font-size: 12px;
       font-style: italic;
     }
@@ -212,7 +212,7 @@
       align-items: center;
       gap: 8px;
       font-size: 12px;
-      color: #8b949e;
+      color: #666666;
     }
 
     .legend-dot {
@@ -222,17 +222,10 @@
       flex-shrink: 0;
     }
 
-    .legend-diamond {
-      width: 10px;
-      height: 10px;
-      transform: rotate(45deg);
-      flex-shrink: 0;
-    }
-
     #graph-container {
       flex: 1;
       position: relative;
-      background: #0d1117;
+      background: #0a0a0a;
     }
 
     #graph { width: 100%; height: 100%; }
@@ -241,10 +234,10 @@
       position: absolute;
       bottom: 16px;
       right: 16px;
-      background: #161b22cc;
-      border: 1px solid #30363d;
+      background: #141414cc;
+      border: 1px solid #252525;
       border-radius: 6px;
-      color: #484f58;
+      color: #444444;
       font-size: 11px;
       padding: 6px 10px;
       pointer-events: none;
@@ -256,7 +249,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      color: #484f58;
+      color: #444444;
     }
 
     .graph-empty svg { margin-bottom: 12px; opacity: 0.3; }
@@ -267,7 +260,7 @@
 <body>
 
 <header>
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#388bfd" stroke-width="2">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2">
     <circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/>
     <circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/>
     <line x1="5" y1="6" x2="10" y2="11"/><line x1="19" y1="6" x2="14" y2="11"/>
@@ -321,11 +314,11 @@
       <h2>Legend</h2>
       <div class="legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:#388bfd"></div>
+          <div class="legend-dot" style="background:#7c3aed"></div>
           <span>Source file (.py / .js / .ts)</span>
         </div>
         <div class="legend-item">
-          <div class="legend-diamond" style="background:#f5a623"></div>
+          <div class="legend-dot" style="background:#0891b2"></div>
           <span>Imported module / package</span>
         </div>
       </div>
@@ -353,8 +346,8 @@
 
 <script>
 const LANG_COLORS = [
-  '#388bfd','#f5a623','#2ea043','#bc4c00','#8957e5',
-  '#d29922','#1f6feb','#e3b341','#3fb950','#f78166'
+  '#7c3aed','#0891b2','#059669','#b45309','#4f46e5',
+  '#be185d','#0369a1','#6d28d9','#047857','#9f1239'
 ];
 
 let cy = null;
@@ -367,17 +360,18 @@ function initGraph() {
       {
         selector: 'node[type = "file"]',
         style: {
-          'background-color': '#388bfd',
-          'border-color': '#1f6feb',
-          'border-width': 1,
+          'background-color': '#7c3aed',
+          'border-color': '#a78bfa',
+          'border-width': 1.5,
+          'shape': 'ellipse',
           'label': 'data(shortLabel)',
-          'color': '#c9d1d9',
-          'font-size': 10,
+          'color': '#d4d4d4',
+          'font-size': 9,
           'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 4,
-          'width': 28,
-          'height': 28,
+          'text-margin-y': 5,
+          'width': 22,
+          'height': 22,
           'text-max-width': 80,
           'text-wrap': 'ellipsis'
         }
@@ -385,47 +379,47 @@ function initGraph() {
       {
         selector: 'node[type = "module"]',
         style: {
-          'background-color': '#f5a623',
-          'border-color': '#d08020',
+          'background-color': '#0891b2',
+          'border-color': '#22d3ee',
           'border-width': 1,
+          'shape': 'ellipse',
           'label': 'data(label)',
-          'color': '#c9d1d9',
-          'font-size': 10,
+          'color': '#d4d4d4',
+          'font-size': 9,
           'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 4,
-          'shape': 'diamond',
-          'width': 22,
-          'height': 22
+          'text-margin-y': 5,
+          'width': 14,
+          'height': 14
         }
       },
       {
         selector: 'edge',
         style: {
           'width': 1,
-          'line-color': '#30363d',
-          'target-arrow-color': '#484f58',
+          'line-color': '#2a2a2a',
+          'target-arrow-color': '#3a3a3a',
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
-          'opacity': 0.7,
-          'arrow-scale': 0.8
+          'opacity': 0.6,
+          'arrow-scale': 0.7
         }
       },
       {
         selector: 'node.highlighted',
-        style: { 'border-color': '#f0f6fc', 'border-width': 2, 'opacity': 1 }
+        style: { 'border-color': '#e4e4e4', 'border-width': 3, 'opacity': 1 }
       },
       {
         selector: 'node.dimmed',
-        style: { 'opacity': 0.2 }
+        style: { 'opacity': 0.15 }
       },
       {
         selector: 'edge.highlighted',
-        style: { 'line-color': '#79c0ff', 'target-arrow-color': '#79c0ff', 'width': 2, 'opacity': 1 }
+        style: { 'line-color': '#a78bfa', 'target-arrow-color': '#a78bfa', 'width': 2, 'opacity': 1 }
       },
       {
         selector: 'edge.dimmed',
-        style: { 'opacity': 0.05 }
+        style: { 'opacity': 0.03 }
       }
     ],
     layout: { name: 'preset' },
@@ -565,16 +559,19 @@ function renderGraph(graph) {
   cy.layout({
     name: 'cose',
     animate: true,
-    animationDuration: 600,
+    animationDuration: 800,
     randomize: true,
-    componentSpacing: 80,
-    nodeRepulsion: 6000,
+    componentSpacing: 120,
+    nodeRepulsion: 450000,
+    nodeOverlap: 20,
     edgeElasticity: 100,
-    idealEdgeLength: 60,
-    gravity: 0.5,
-    numIter: 1000,
+    idealEdgeLength: 80,
+    gravity: 0.8,
+    numIter: 1500,
     initialTemp: 200,
-    coolingFactor: 0.95
+    coolingFactor: 0.95,
+    nodeDimensionsIncludeLabels: true,
+    padding: 30
   }).run();
 
   document.getElementById('graph-hint').style.display = 'block';
