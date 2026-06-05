@@ -14,7 +14,16 @@ graphBuilder:
   env:
     ENVIRONMENT: dev
 
-# serviceAccount.annotations will be populated after the IRSA role is created:
-#   serviceAccount:
-#     annotations:
-#       eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-dev-app-role
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-dev-app-role
+    # This annotation is what activates IRSA for the app pods.
+    # EKS sees it and injects temporary AWS credentials scoped to this role.
+    # Run `terraform output -module=irsa role_arn` after apply to confirm the ARN.
+
+ingress:
+  enabled: true
+  # Requires the AWS Load Balancer Controller to be running in the cluster.
+  # Once enabled, the controller creates an internet-facing ALB automatically.
+  # The frontend and result-api LoadBalancer Services can then be switched to
+  # ClusterIP once the Ingress is confirmed working.
