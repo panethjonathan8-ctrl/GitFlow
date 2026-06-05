@@ -70,3 +70,19 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gitflow-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - result-api
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

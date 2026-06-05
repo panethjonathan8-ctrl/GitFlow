@@ -89,6 +89,22 @@ resultApi:
     # When result-api calls http://analyzer:5001, CoreDNS resolves "analyzer"
     # to the ClusterIP of the analyzer Service automatically.
 
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend:
+  replicaCount: 1
+  image:
+    repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/frontend
+  port: 80
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 # ── HPA ───────────────────────────────────────────────────────────────────────
 hpa:
   enabled: false
