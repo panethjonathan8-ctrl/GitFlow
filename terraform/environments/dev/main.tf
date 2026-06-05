@@ -121,3 +121,31 @@ module "argocd" {
   # ArgoCD can only be installed after the cluster and node group are fully
   # ready — depends_on enforces that order.
 }
+
+module "irsa" {
+  source = "../../modules/irsa"
+
+  project              = var.project
+  env                  = var.env
+  oidc_provider_arn    = module.eks.oidc_provider_arn
+  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  # namespace and service_account_name use module defaults (gitflow-analyzer)
+
+  depends_on = [module.eks]
+}
+
+module "aws_lb_controller" {
+  source = "../../modules/aws-lb-controller"
+
+  project           = var.project
+  env               = var.env
+  cluster_name      = module.eks.cluster_name
+  vpc_id            = module.vpc.vpc_id
+  aws_region        = var.aws_region
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+
+  depends_on = [module.eks]
+  # The controller needs the cluster to exist and the OIDC provider to be
+  # registered before it can start.
+}
