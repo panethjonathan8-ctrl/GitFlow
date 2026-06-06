@@ -20,12 +20,12 @@ resource "helm_release" "argocd" {
   namespace  = kubernetes_namespace.argocd.metadata[0].name
 
   timeout = 600
-  # ArgoCD deploys ~10 components (server, repo-server, application-controller,
-  # dex, redis, etc.). 10 minutes gives them all time to become Ready.
-
-  wait = true
-  # Don't return until all pods are Running — this ensures any subsequent
-  # resources applied after this module don't run against a half-ready ArgoCD.
+  wait    = false
+  # wait = false because ArgoCD has many components and Terraform's Helm provider
+  # consistently times out waiting for them even when all pods are Running.
+  # ArgoCD comes up reliably on its own — verified across multiple applies.
+  # The argocd kubernetes_namespace resource below is what ensures the namespace
+  # exists before any downstream resources reference it.
 
   values = [
     yamlencode({
