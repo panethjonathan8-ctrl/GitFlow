@@ -8,16 +8,17 @@ on:
         required: true
         type: choice
         options:
-          - staging
           - dev
+          - staging
       image_tag:
-        description: 'Image tag (git SHA) to roll back to — find it in S3 deployments/<env>/history.json'
+        description: 'Image tag (git SHA) to roll back to — find previous tags in values-dev.yaml git history'
         required: true
         type: string
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  # contents: write so this job can commit the reverted image tag back to main
 
 jobs:
   rollback:
@@ -27,6 +28,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -34,104 +37,47 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Verify all three images exist in ECR
+      - name: Verify image tag exists in ECR
         env:
           TAG: ${{ inputs.image_tag }}
           REGION: ${{ vars.AWS_REGION }}
-        run: |
-          for repo in gitflow-analyzer/analyzer gitflow-analyzer/graph-builder gitflow-analyzer/result-api; do
-            STATUS=$(aws ecr describe-images \
-              --repository-name "$repo" \
-              --image-ids imageTag="$TAG" \
-              --region "$REGION" \
-              --query "imageDetails[0].imageTags[0]" \
-              --output text 2>/dev/null || echo "NOT_FOUND")
-            if [ "$STATUS" = "NOT_FOUND" ] || [ "$STATUS" = "None" ]; then
-              echo "ERROR: Tag '$TAG' not found in ECR repo '$repo'"
-              exit 1
-            fi
-            echo "Verified: $repo:$TAG"
-          done
+        run: scripts/verify-image-tag.sh "$TAG" "$REGION"
+        # Fails fast if the requested tag doesn't exist in ECR,
+        # so we never commit a rollback that would leave pods crash-looping.
 
-      - name: Roll back ${{ inputs.environment }} via SSM
-        id: rollback
+      - name: Check if EKS cluster exists
+        id: eks-check
+        run: |
+          if aws eks describe-cluster --name gitflow-analyzer-dev --region ${{ vars.AWS_REGION }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "EKS cluster found — proceeding with rollback"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "EKS cluster not found — skipping"
+          fi
+
+      - name: Update image tag in values file
+        if: steps.eks-check.outputs.exists == 'true'
         env:
           TAG: ${{ inputs.image_tag }}
-          REG: ${{ vars.ECR_REGISTRY }}
-          REGION: ${{ vars.AWS_REGION }}
-          INSTANCE_ID: ${{ inputs.environment == 'dev' && vars.EC2_INSTANCE_ID || vars.STAGING_INSTANCE_ID }}
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
-              \"set -e\",
-              \"echo === Rolling back ${{ inputs.environment }} to $TAG ===\",
-              \"docker stop analyzer graph-builder result-api 2>/dev/null || true\",
-              \"docker rm analyzer graph-builder result-api 2>/dev/null || true\",
-              \"docker network create gitflow-net 2>/dev/null || true\",
-              \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $REG\",
-              \"docker pull $REG/gitflow-analyzer/analyzer:$TAG\",
-              \"docker pull $REG/gitflow-analyzer/graph-builder:$TAG\",
-              \"docker pull $REG/gitflow-analyzer/result-api:$TAG\",
-              \"docker run -d --name analyzer --network gitflow-net -p 5001:5001 -e PORT=5001 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=${{ inputs.environment }} -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/analyzer:$TAG\",
-              \"docker run -d --name graph-builder --network gitflow-net -p 5002:5002 -e PORT=5002 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=${{ inputs.environment }} -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/graph-builder:$TAG\",
-              \"docker run -d --name result-api --network gitflow-net -p 5000:5000 -e PORT=5000 -e ANALYZER_URL=http://analyzer:5001 -e GRAPH_BUILDER_URL=http://graph-builder:5002 --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/result-api:$TAG\",
-              \"echo === Rollback complete ===\",
-              \"docker ps\"
-            ]" \
-            --region "$REGION" \
-            --query "Command.CommandId" \
-            --output text)
-          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+          ENV: ${{ inputs.environment }}
+        run: python3 scripts/update-image-tag.py k8s/helm/gitflow-analyzer/values-${ENV}.yaml "$TAG"
 
-      - name: Wait for rollback to complete
+      - name: Commit and push rollback tag
+        if: steps.eks-check.outputs.exists == 'true'
         env:
-          INSTANCE_ID: ${{ inputs.environment == 'dev' && vars.EC2_INSTANCE_ID || vars.STAGING_INSTANCE_ID }}
-        run: |
-          aws ssm wait command-executed \
-            --command-id "${{ steps.rollback.outputs.command_id }}" \
-            --instance-id "$INSTANCE_ID" \
-            --region "${{ vars.AWS_REGION }}"
-
-      - name: Health check after rollback
-        env:
-          INSTANCE_ID: ${{ inputs.environment == 'dev' && vars.EC2_INSTANCE_ID || vars.STAGING_INSTANCE_ID }}
-        run: |
-          sleep 15
-          TARGET_IP=$(aws ec2 describe-instances \
-            --instance-ids "$INSTANCE_ID" \
-            --region "${{ vars.AWS_REGION }}" \
-            --query "Reservations[0].Instances[0].PublicIpAddress" \
-            --output text)
-          echo "Checking ${{ inputs.environment }} at $TARGET_IP:5000"
-          for i in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$TARGET_IP:5000/health")
-            if [ "$STATUS" = "200" ]; then
-              echo "Health check passed — rollback successful"
-              exit 0
-            fi
-            echo "Attempt $i: got $STATUS — retrying in 10s"
-            sleep 10
-          done
-          echo "Health check failed after rollback"
-          exit 1
-
-      - name: Record rollback as deployment
-        if: success()
-        run: |
-          python3 scripts/record-deployment.py \
-            "${{ inputs.environment }}" \
-            "${{ inputs.image_tag }}" \
-            "${{ inputs.image_tag }}" \
-            "${{ github.actor }}" \
-            "${{ vars.AWS_REGION }}"
+          TAG: ${{ inputs.image_tag }}
+          ENV: ${{ inputs.environment }}
+        run: scripts/commit-rollback-tag.sh "$TAG" "$ENV"
+        # ArgoCD detects this commit and rolls the deployment back within ~3 minutes.
+        # No kubectl or helm commands needed — Git is the source of truth.
 
       - name: Print rollback summary
-        if: success()
+        if: steps.eks-check.outputs.exists == 'true'
         run: |
           echo "================================"
-          echo "Rollback successful"
+          echo "Rollback triggered"
           echo "Environment: ${{ inputs.environment }}"
-          echo "Rolled back to: ${{ inputs.image_tag }}"
+          echo "Rolling back to image tag: ${{ inputs.image_tag }}"
+          echo "ArgoCD will complete the rollback within ~3 minutes"
           echo "================================"

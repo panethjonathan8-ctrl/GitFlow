@@ -74,96 +74,10 @@ jobs:
           docker push "$IMAGE_LATEST"
           echo "Pushed: $IMAGE_SHA"
 
-  deploy-dev:
-    name: Deploy to Dev
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy to dev via SSM
-        id: deploy
-        env:
-          TAG: ${{ needs.build.outputs.image_tag }}
-          REG: ${{ vars.ECR_REGISTRY }}
-          REGION: ${{ vars.AWS_REGION }}
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
-              \"set -e\",
-              \"docker stop gitflow-analyzer-app analyzer graph-builder result-api 2>/dev/null || true\",
-              \"docker rm gitflow-analyzer-app analyzer graph-builder result-api 2>/dev/null || true\",
-              \"docker network create gitflow-net 2>/dev/null || true\",
-              \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $REG\",
-              \"docker pull $REG/gitflow-analyzer/analyzer:$TAG\",
-              \"docker pull $REG/gitflow-analyzer/graph-builder:$TAG\",
-              \"docker pull $REG/gitflow-analyzer/result-api:$TAG\",
-              \"docker run -d --name analyzer --network gitflow-net -p 5001:5001 -e PORT=5001 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=dev -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/analyzer:$TAG\",
-              \"docker run -d --name graph-builder --network gitflow-net -p 5002:5002 -e PORT=5002 -e AWS_REGION=$REGION -e PROJECT_NAME=gitflow-analyzer -e ENVIRONMENT=dev -e GIT_PYTHON_REFRESH=quiet --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/graph-builder:$TAG\",
-              \"docker run -d --name result-api --network gitflow-net -p 5000:5000 -e PORT=5000 -e ANALYZER_URL=http://analyzer:5001 -e GRAPH_BUILDER_URL=http://graph-builder:5002 --restart unless-stopped --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 $REG/gitflow-analyzer/result-api:$TAG\",
-              \"docker ps\"
-            ]" \
-            --region "$REGION" \
-            --query "Command.CommandId" \
-            --output text)
-          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
-
-      - name: Wait for dev deploy
-        run: |
-          aws ssm wait command-executed \
-            --command-id "${{ steps.deploy.outputs.command_id }}" \
-            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
-            --region "${{ vars.AWS_REGION }}"
-
-      - name: Dev health check
-        run: |
-          sleep 15
-          for i in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://108.131.187.89:5000/health")
-            if [ "$STATUS" = "200" ]; then
-              echo "Dev health check passed"
-              echo "Dev URL: http://108.131.187.89:5000"
-              exit 0
-            fi
-            echo "Attempt $i failed - retrying in 10s"
-            sleep 10
-          done
-          echo "Dev health check failed"
-          exit 1
-
-      - name: Record dev deployment
-        if: success()
-        run: |
-          python3 scripts/record-deployment.py \
-            "dev" \
-            "${{ needs.build.outputs.image_tag }}" \
-            "${{ github.sha }}" \
-            "${{ github.actor }}" \
-            "${{ vars.AWS_REGION }}"
-
-      - name: Print deployment summary
-        if: success()
-        run: |
-          echo "================================"
-          echo "Dev deployment successful"
-          echo "Image tag: ${{ needs.build.outputs.image_tag }}"
-          echo "Dev URL: http://108.131.187.89:5000"
-          echo "================================"
-
   deploy-eks:
     name: Deploy to EKS
     runs-on: ubuntu-latest
-    needs: [build, deploy-dev]
+    needs: [build]
     permissions:
       id-token: write
       contents: write
