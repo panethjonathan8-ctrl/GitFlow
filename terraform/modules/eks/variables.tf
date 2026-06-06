@@ -80,3 +80,8 @@ variable "node_disk_size_gb" {
   # 20 GB covers the node OS, kubelet, and your three service images
   # (~200 MB each). This is the EKS-recommended minimum.
 }
+
+variable "github_actions_role_arn" {
+  description = "ARN of the GitHub Actions IAM role — granted read/write access to the cluster so terraform plan and apply work in CI"
+  type        = string
+}
