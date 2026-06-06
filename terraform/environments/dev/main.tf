@@ -101,14 +101,17 @@ module "ec2" {
 }
 
 module "eks" {
-  source       = "../../modules/eks"
-  project      = var.project
-  env          = var.env
-  vpc_id       = module.vpc.vpc_id
-  subnet_ids   = module.vpc.public_subnet_ids
+  source         = "../../modules/eks"
+  project        = var.project
+  env            = var.env
+  vpc_id         = module.vpc.vpc_id
+  subnet_ids     = module.vpc.public_subnet_ids
+  instance_types = ["t3a.medium"]
+  # t3a.medium = 2 vCPU, 4 GB RAM — AMD equivalent of t3.medium at ~$2/month cheaper.
+  # Using t3a because t3.medium has a pending quota increase request with AWS.
+  # Quota confirmed available via dry-run before applying.
   desired_size = 1
   max_size     = 2
-  # cluster_version, instance_types, min_size, capacity_type use module defaults
 }
 
 module "argocd" {
