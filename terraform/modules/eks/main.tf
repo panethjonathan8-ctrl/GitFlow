@@ -302,3 +302,41 @@ resource "aws_eks_addon" "kube_proxy" {
     Environment = var.env
   }
 }
+
+# ── GitHub Actions cluster access ─────────────────────────────────────────────
+# EKS has two separate authorization layers:
+#   1. IAM — controls who can call AWS APIs (create clusters, node groups, etc.)
+#   2. Kubernetes RBAC — controls who can call the Kubernetes API (list pods, etc.)
+#
+# The GitHub Actions role already has IAM permissions via its attached policies.
+# These two resources grant it Kubernetes API access so that terraform plan/apply
+# can read and write Helm releases and Kubernetes resources from CI.
+#
+# Security note: we use OIDC so the role can only be assumed by workflows
+# running from your specific GitHub repo — not by arbitrary callers.
+# AmazonEKSClusterAdminPolicy is broad but acceptable for a dev environment.
+# In production, scope this down to a custom ClusterRole with only the
+# get/list/watch permissions needed for plan and create/update/delete for apply.
+
+resource "aws_eks_access_entry" "github_actions" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = var.github_actions_role_arn
+  type          = "STANDARD"
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_eks_access_policy_association" "github_actions" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = var.github_actions_role_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.github_actions]
+}

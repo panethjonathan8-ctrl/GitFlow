@@ -97,8 +97,11 @@ module "eks" {
   # t3a.medium = 2 vCPU, 4 GB RAM — AMD equivalent of t3.medium at ~$2/month cheaper.
   # Using t3a because t3.medium has a pending quota increase request with AWS.
   # Quota confirmed available via dry-run before applying.
-  desired_size = 1
-  max_size     = 2
+  desired_size            = 1
+  max_size                = 2
+  github_actions_role_arn = module.iam.github_actions_role_arn
+  # Grants the CI role Kubernetes API access so terraform plan/apply can
+  # read and write Helm releases and Kubernetes resources from GitHub Actions.
 }
 
 module "argocd" {
