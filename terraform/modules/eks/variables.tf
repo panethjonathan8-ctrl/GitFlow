@@ -24,7 +24,7 @@ variable "subnet_ids" {
 variable "cluster_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.32"
+  default     = "1.36"
   # Pinned so you control upgrades — EKS will not auto-upgrade.
   # Each version has a ~14-month standard support window.
   # Check https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html

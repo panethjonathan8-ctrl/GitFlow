@@ -185,6 +185,10 @@ resource "aws_eks_node_group" "main" {
   subnet_ids      = var.subnet_ids
   instance_types  = var.instance_types
   capacity_type   = var.capacity_type
+  version         = var.cluster_version
+  # Explicitly set so Terraform upgrades the node group whenever
+  # cluster_version changes. Without this the nodes stay on the old
+  # Kubernetes version and drift from the control plane.
 
   launch_template {
     id      = aws_launch_template.nodes.id
