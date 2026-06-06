@@ -15,7 +15,8 @@ fi
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
-git pull --rebase origin main
+# Stage the file BEFORE pulling — git pull --rebase fails if there are unstaged changes
 git add k8s/helm/gitflow-analyzer/values-dev.yaml
+git pull --rebase origin main
 git commit -m "chore: deploy image tag ${TAG} to EKS"
 git push origin main
