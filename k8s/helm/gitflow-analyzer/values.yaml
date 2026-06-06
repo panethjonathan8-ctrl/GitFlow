@@ -67,11 +67,9 @@ resultApi:
     repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/result-api
   port: 5000
   service:
-    type: LoadBalancer
-    # ClusterIP: only reachable inside the cluster — use with an Ingress.
-    # LoadBalancer: provisions an AWS NLB, reachable from the internet.
-    #   Use LoadBalancer for quick smoke testing before the ingress controller
-    #   is set up. Switch back to ClusterIP once ingress is working.
+    type: ClusterIP
+    # ClusterIP: only reachable inside the cluster via the Ingress.
+    # The frontend nginx proxies /api/* to this service internally.
   resources:
     requests:
       cpu: 50m
@@ -96,7 +94,9 @@ frontend:
     repository: 153772056450.dkr.ecr.eu-west-1.amazonaws.com/gitflow-analyzer/frontend
   port: 80
   service:
-    type: LoadBalancer
+    type: ClusterIP
+    # All external traffic enters here via the ALB Ingress.
+    # Nginx serves the HTML UI and proxies /api/* to result-api internally.
   resources:
     requests:
       cpu: 10m
