@@ -23,19 +23,9 @@ output "secret_arns" {
   value       = module.secrets.secret_arns
 }
 
-output "api_url" {
-  description = "URL to reach the API"
-  value       = module.ec2.api_url
-}
-
-output "ssh_command" {
-  description = "SSH into the instance"
-  value       = module.ec2.ssh_command
-}
-
-output "instance_id" {
-  description = "EC2 instance ID"
-  value       = module.ec2.instance_id
+output "irsa_role_arn" {
+  description = "IRSA role ARN — add this to values-dev.yaml under serviceAccount.annotations"
+  value       = module.irsa.role_arn
 }
 
 output "eks_cluster_name" {
