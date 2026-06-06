@@ -118,10 +118,10 @@ module "argocd" {
 module "irsa" {
   source = "../../modules/irsa"
 
-  project              = var.project
-  env                  = var.env
-  oidc_provider_arn    = module.eks.oidc_provider_arn
-  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  project           = var.project
+  env               = var.env
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
   # namespace and service_account_name use module defaults (gitflow-analyzer)
 
   depends_on = [module.eks]
