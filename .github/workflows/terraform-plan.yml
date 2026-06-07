@@ -31,11 +31,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         # Downloads your repo code into the CI runner.
 
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
@@ -45,7 +45,7 @@ jobs:
           # No secrets are used here — just the role ARN which is not sensitive.
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.10.5"
           # Pin to the exact version you are using locally.
@@ -89,7 +89,7 @@ jobs:
         continue-on-error: true
 
       - name: Post plan to PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         if: github.event_name == 'pull_request'
         env:
           PLAN: ${{ steps.plan.outputs.stdout }}
