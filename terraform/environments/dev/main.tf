@@ -78,7 +78,8 @@ module "iam" {
 module "ecr" {
   source   = "../../modules/ecr"
   project  = var.project
-  services = ["analyzer", "graph-builder", "result-api", "frontend"]
+  services = ["analyzer", "graph-builder", "result-api"]
+  # frontend removed — static files are now served from S3/CloudFront.
 }
 
 module "secrets" {
@@ -141,4 +142,25 @@ module "aws_lb_controller" {
   depends_on = [module.eks]
   # The controller needs the cluster to exist and the OIDC provider to be
   # registered before it can start.
+}
+
+# ── Frontend CDN ──────────────────────────────────────────────────────────────
+data "kubernetes_ingress_v1" "app" {
+  metadata {
+    name      = "gitflow-analyzer"
+    namespace = "gitflow-analyzer"
+  }
+  # Reads the ALB hostname assigned by the AWS Load Balancer Controller.
+  # Used as the API origin for the CloudFront distribution below.
+  depends_on = [module.argocd]
+}
+
+module "frontend_cdn" {
+  source = "../../modules/frontend-cdn"
+
+  project      = var.project
+  env          = var.env
+  alb_dns_name = data.kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname
+
+  depends_on = [module.aws_lb_controller]
 }

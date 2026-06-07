@@ -16,13 +16,11 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: frontend
+                name: result-api
                 port:
-                  number: 80
-                # All external traffic enters through the frontend nginx.
-                # Nginx serves the HTML UI at / and proxies /api/* to
-                # result-api:5000 internally — result-api never needs a
-                # public load balancer.
+                  number: {{ .Values.resultApi.port }}
+                # CloudFront routes /* to S3 (static files) and /api/* to
+                # this ALB (result-api). The ALB only needs to serve the API.
       {{- if .Values.ingress.host }}
       host: {{ .Values.ingress.host }}
       {{- end }}

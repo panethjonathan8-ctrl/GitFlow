@@ -42,3 +42,18 @@ output "eks_oidc_provider_arn" {
   description = "OIDC provider ARN — needed for IRSA (pod-level IAM roles)"
   value       = module.eks.oidc_provider_arn
 }
+
+output "cloudfront_url" {
+  description = "Frontend URL — add this as a bookmark"
+  value       = module.frontend_cdn.cloudfront_url
+}
+
+output "frontend_bucket" {
+  description = "S3 bucket name — set this as FRONTEND_BUCKET in GitHub Actions variables"
+  value       = module.frontend_cdn.s3_bucket_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID — set this as CLOUDFRONT_DISTRIBUTION_ID in GitHub Actions variables"
+  value       = module.frontend_cdn.cloudfront_distribution_id
+}
