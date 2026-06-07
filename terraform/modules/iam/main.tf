@@ -228,6 +228,45 @@ resource "aws_iam_role_policy" "terraform_infra" {
   })
 }
 
+# ── Policy: Frontend S3 + CloudFront ─────────────────────────────────────────
+resource "aws_iam_role_policy" "frontend_cdn" {
+  name = "frontend-cdn-deploy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "FrontendS3Upload"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        # Scoped to buckets matching the project naming convention.
+        Resource = [
+          "arn:aws:s3:::${var.project}-frontend-*",
+          "arn:aws:s3:::${var.project}-frontend-*/*"
+        ]
+      },
+      {
+        Sid    = "CloudFrontInvalidation"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListDistributions"
+        ]
+        # CloudFront invalidation cannot be scoped below account level
+        # without knowing the distribution ARN at policy-write time.
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # ── Policy: SSM for EC2 remote commands ───────────────────────────────────────
 resource "aws_iam_role_policy" "ssm" {
   name = "ssm-ec2-commands"
