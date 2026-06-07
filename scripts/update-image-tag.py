@@ -12,13 +12,13 @@ def update_image_tag(values_file: str, tag: str) -> None:
         # Replace the tag line that sits under the existing image: block
         content = re.sub(
             r"(^image:\s*\n\s+tag:)\s*\S+",
-            rf"\g<1> {tag}",
+            rf'\g<1> "{tag}"',
             content,
             flags=re.MULTILINE,
         )
     else:
         # No image: block yet — append one
-        content = content.rstrip("\n") + f"\nimage:\n  tag: {tag}\n"
+        content = content.rstrip("\n") + f'\nimage:\n  tag: "{tag}"\n'
 
     with open(values_file, "w") as f:
         f.write(content)
