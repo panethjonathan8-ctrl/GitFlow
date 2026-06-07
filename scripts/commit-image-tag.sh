@@ -15,8 +15,11 @@ fi
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
-# Stage the file BEFORE pulling — git pull --rebase fails if there are unstaged changes
+# Commit first, then rebase onto main.
+# git pull --rebase refuses to run if the index has staged changes, so we
+# commit before pulling. The rebase then replays our commit on top of any
+# new commits that landed on main while the build was running.
 git add k8s/helm/gitflow-analyzer/values-dev.yaml
-git pull --rebase origin main
 git commit -m "chore: deploy image tag ${TAG} to EKS"
+git pull --rebase origin main
 git push origin main
