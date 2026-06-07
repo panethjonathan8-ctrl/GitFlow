@@ -243,6 +243,27 @@
       pointer-events: none;
     }
 
+    .reset-view-btn {
+      position: absolute;
+      bottom: 48px;
+      right: 16px;
+      background: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 6px;
+      color: #888888;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 10px;
+      cursor: pointer;
+      display: none;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .reset-view-btn:hover {
+      background: #2a2a2a;
+      color: #d4d4d4;
+    }
+
     .graph-empty {
       position: absolute;
       top: 50%;
@@ -338,6 +359,7 @@
       <p>Enter a GitHub repo URL to visualise its dependency graph</p>
       <small>Supports Python, JavaScript and TypeScript repos</small>
     </div>
+    <button class="reset-view-btn" id="reset-view-btn" onclick="resetView()">⊙ Reset view</button>
     <div class="graph-hint" id="graph-hint" style="display:none">
       Scroll to zoom · drag to pan · click a node to highlight
     </div>
@@ -575,6 +597,14 @@ function renderGraph(graph) {
   }).run();
 
   document.getElementById('graph-hint').style.display = 'block';
+  document.getElementById('reset-view-btn').style.display = 'block';
+}
+
+function resetView() {
+  if (cy) {
+    cy.elements().removeClass('highlighted dimmed');
+    cy.fit(undefined, 30);
+  }
 }
 
 document.getElementById('repo-url').addEventListener('keydown', e => {
