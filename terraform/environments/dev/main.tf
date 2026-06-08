@@ -94,10 +94,10 @@ module "eks" {
   env            = var.env
   vpc_id         = module.vpc.vpc_id
   subnet_ids     = module.vpc.public_subnet_ids
-  instance_types = ["t3a.medium"]
-  # t3a.medium = 2 vCPU, 4 GB RAM — AMD equivalent of t3.medium at ~$2/month cheaper.
-  # Using t3a because t3.medium has a pending quota increase request with AWS.
-  # Quota confirmed available via dry-run before applying.
+  instance_types = ["t3a.large"]
+  # t3a.large = 2 vCPU, 8 GB RAM — upgraded from t3a.medium to give
+  # Prometheus + Grafana enough headroom alongside ArgoCD and the app pods.
+  # Also raises the pod limit from 17 to ~36 (3 ENIs × 12 IPs per ENI).
   desired_size            = 1
   max_size                = 2
   github_actions_role_arn = module.iam.github_actions_role_arn

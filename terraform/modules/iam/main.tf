@@ -237,31 +237,70 @@ resource "aws_iam_role_policy" "frontend_cdn" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "FrontendS3Upload"
+        Sid    = "FrontendS3"
         Effect = "Allow"
         Action = [
           "s3:PutObject",
           "s3:GetObject",
           "s3:DeleteObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketVersioning",
+          "s3:GetBucketTagging",
+          "s3:GetBucketLocation",
+          "s3:CreateBucket",
+          "s3:DeleteBucket"
         ]
-        # Scoped to buckets matching the project naming convention.
         Resource = [
           "arn:aws:s3:::${var.project}-frontend-*",
           "arn:aws:s3:::${var.project}-frontend-*/*"
         ]
       },
       {
-        Sid    = "CloudFrontInvalidation"
+        Sid    = "CloudFrontManage"
+        Effect = "Allow"
+        # cloudfront:* avoids repeated whack-a-mole as Terraform adds new read
+        # actions (e.g. ListTagsForResource) across provider versions.
+        # CloudFront does not support resource-level ARNs, so Resource: * is required.
+        Action   = ["cloudfront:*"]
+        Resource = "*"
+      },
+      {
+        Sid    = "SSMParameterReadWrite"
         Effect = "Allow"
         Action = [
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetInvalidation",
-          "cloudfront:ListDistributions"
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:AddTagsToResource",
+          "ssm:ListTagsForResource"
         ]
-        # CloudFront invalidation cannot be scoped below account level
-        # without knowing the distribution ARN at policy-write time.
+        # Scoped to this project's parameters only.
+        Resource = "arn:aws:ssm:*:${var.aws_account_id}:parameter/${var.project}/*"
+      },
+      {
+        Sid    = "SSMDescribe"
+        Effect = "Allow"
+        Action = ["ssm:DescribeParameters"]
+        # DescribeParameters cannot be scoped below account level — AWS
+        # requires Resource: * for this list/filter action.
         Resource = "*"
+      },
+      {
+        Sid    = "FrontendS3BucketRead"
+        Effect = "Allow"
+        Action = ["s3:Get*", "s3:List*"]
+        # Covers every read operation Terraform needs during plan
+        # (ACL, accelerate config, encryption, versioning, policy, etc.)
+        # Scoped to the frontend bucket only.
+        Resource = [
+          "arn:aws:s3:::${var.project}-frontend-*",
+          "arn:aws:s3:::${var.project}-frontend-*/*"
+        ]
       }
     ]
   })
