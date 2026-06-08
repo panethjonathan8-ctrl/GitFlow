@@ -3,7 +3,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
   # This tells AWS to trust JWT tokens issued by GitHub Actions.
   # Without this, AWS has no idea who GitHub is and will reject all requests.
-  count           = var.create_oidc_provider ? 1 : 0
+  count = var.create_oidc_provider ? 1 : 0
 
   client_id_list = ["sts.amazonaws.com"]
   # This says the tokens are intended for AWS STS specifically.
@@ -24,7 +24,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-            Federated = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${var.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
+          Federated = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${var.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
           # The principal is the OIDC provider, not a user or service.
           # This means only tokens from GitHub can trigger this assume role.
         }
