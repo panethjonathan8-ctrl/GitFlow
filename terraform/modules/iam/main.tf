@@ -237,31 +237,70 @@ resource "aws_iam_role_policy" "frontend_cdn" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "FrontendS3Upload"
+        Sid    = "FrontendS3"
         Effect = "Allow"
         Action = [
           "s3:PutObject",
           "s3:GetObject",
           "s3:DeleteObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+          "s3:GetBucketVersioning",
+          "s3:GetBucketTagging",
+          "s3:GetBucketLocation",
+          "s3:CreateBucket",
+          "s3:DeleteBucket"
         ]
-        # Scoped to buckets matching the project naming convention.
         Resource = [
           "arn:aws:s3:::${var.project}-frontend-*",
           "arn:aws:s3:::${var.project}-frontend-*/*"
         ]
       },
       {
-        Sid    = "CloudFrontInvalidation"
+        Sid    = "CloudFrontManage"
         Effect = "Allow"
         Action = [
           "cloudfront:CreateInvalidation",
           "cloudfront:GetInvalidation",
-          "cloudfront:ListDistributions"
+          "cloudfront:ListDistributions",
+          "cloudfront:GetDistribution",
+          "cloudfront:GetDistributionConfig",
+          "cloudfront:CreateDistribution",
+          "cloudfront:UpdateDistribution",
+          "cloudfront:DeleteDistribution",
+          "cloudfront:TagResource",
+          "cloudfront:GetOriginAccessControl",
+          "cloudfront:CreateOriginAccessControl",
+          "cloudfront:UpdateOriginAccessControl",
+          "cloudfront:DeleteOriginAccessControl",
+          "cloudfront:ListOriginAccessControls",
+          "cloudfront:CreateFunction",
+          "cloudfront:UpdateFunction",
+          "cloudfront:DeleteFunction",
+          "cloudfront:DescribeFunction",
+          "cloudfront:PublishFunction",
+          "cloudfront:ListFunctions",
+          "cloudfront:GetFunction"
         ]
-        # CloudFront invalidation cannot be scoped below account level
-        # without knowing the distribution ARN at policy-write time.
         Resource = "*"
+      },
+      {
+        Sid    = "SSMParameterStore"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:DescribeParameters",
+          "ssm:AddTagsToResource",
+          "ssm:ListTagsForResource"
+        ]
+        # Scoped to this project's parameters only.
+        Resource = "arn:aws:ssm:*:${var.aws_account_id}:parameter/${var.project}/*"
       }
     ]
   })
