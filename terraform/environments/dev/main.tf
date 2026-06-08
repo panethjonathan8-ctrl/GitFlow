@@ -145,8 +145,59 @@ module "aws_lb_controller" {
 }
 
 # ── Frontend CDN ──────────────────────────────────────────────────────────────
-# CloudFront + S3 resources are managed outside Terraform for now.
-# The Kubernetes ingress data source that was here required the EKS cluster
-# to be running, which broke terraform plan when the cluster was down.
-# Proper fix: use data.aws_lb with tag-based lookup (AWS provider only,
-# no Kubernetes dependency). TODO: implement in a follow-up PR.
+# Two-layer design that survives nightly cluster teardown:
+#
+#   Layer 1 — data.aws_lb + aws_ssm_parameter (runs only when cluster is up)
+#     Looks up the ALB by the tag the LB Controller puts on it, then writes
+#     the DNS name into SSM Parameter Store. Uses the AWS provider only —
+#     no Kubernetes dependency.
+#
+#   Layer 2 — data.aws_ssm_parameter + module.frontend_cdn (always works)
+#     Reads the last-known ALB hostname from SSM. SSM retains the value
+#     even after the cluster is destroyed, so terraform plan succeeds
+#     overnight without a running cluster.
+#
+# When the cluster is UP:   apply writes the new ALB hostname to SSM and
+#                           keeps CloudFront pointing at the right origin.
+# When the cluster is DOWN: plan reads the stale SSM value — no changes
+#                           to CloudFront, plan succeeds cleanly.
+
+data "aws_lb" "app" {
+  tags = {
+    "elbv2.k8s.aws/cluster"  = "${var.project}-${var.env}"
+    "ingress.k8s.aws/stack"  = "gitflow-analyzer/gitflow-analyzer"
+  }
+  # The AWS Load Balancer Controller tags every ALB it creates with these two
+  # keys so we can find it by tag instead of by name (which changes on every
+  # cluster recreation).
+  depends_on = [module.aws_lb_controller, module.argocd]
+  # Wait for the LB Controller and ArgoCD to be installed — the ALB is created
+  # when ArgoCD syncs the Ingress resource, not by Terraform directly.
+}
+
+resource "aws_ssm_parameter" "alb_dns_name" {
+  name  = "/${var.project}/${var.env}/alb-dns-name"
+  type  = "String"
+  value = data.aws_lb.app.dns_name
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+data "aws_ssm_parameter" "alb_dns_name" {
+  name = "/${var.project}/${var.env}/alb-dns-name"
+  # Reads the value written by aws_ssm_parameter.alb_dns_name above.
+  # Because SSM is a durable store, this succeeds even when the cluster
+  # (and the ALB) no longer exist.
+  depends_on = [aws_ssm_parameter.alb_dns_name]
+}
+
+module "frontend_cdn" {
+  source = "../../modules/frontend-cdn"
+
+  project      = var.project
+  env          = var.env
+  alb_dns_name = data.aws_ssm_parameter.alb_dns_name.value
+}
