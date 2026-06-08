@@ -262,29 +262,10 @@ resource "aws_iam_role_policy" "frontend_cdn" {
       {
         Sid    = "CloudFrontManage"
         Effect = "Allow"
-        Action = [
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetInvalidation",
-          "cloudfront:ListDistributions",
-          "cloudfront:GetDistribution",
-          "cloudfront:GetDistributionConfig",
-          "cloudfront:CreateDistribution",
-          "cloudfront:UpdateDistribution",
-          "cloudfront:DeleteDistribution",
-          "cloudfront:TagResource",
-          "cloudfront:GetOriginAccessControl",
-          "cloudfront:CreateOriginAccessControl",
-          "cloudfront:UpdateOriginAccessControl",
-          "cloudfront:DeleteOriginAccessControl",
-          "cloudfront:ListOriginAccessControls",
-          "cloudfront:CreateFunction",
-          "cloudfront:UpdateFunction",
-          "cloudfront:DeleteFunction",
-          "cloudfront:DescribeFunction",
-          "cloudfront:PublishFunction",
-          "cloudfront:ListFunctions",
-          "cloudfront:GetFunction"
-        ]
+        # cloudfront:* avoids repeated whack-a-mole as Terraform adds new read
+        # actions (e.g. ListTagsForResource) across provider versions.
+        # CloudFront does not support resource-level ARNs, so Resource: * is required.
+        Action   = ["cloudfront:*"]
         Resource = "*"
       },
       {
