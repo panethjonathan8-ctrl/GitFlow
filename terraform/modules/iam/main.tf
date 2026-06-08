@@ -312,17 +312,10 @@ resource "aws_iam_role_policy" "frontend_cdn" {
       {
         Sid    = "FrontendS3BucketRead"
         Effect = "Allow"
-        Action = [
-          "s3:GetBucketAcl",
-          "s3:GetBucketCORS",
-          "s3:GetBucketWebsite",
-          "s3:GetBucketLogging",
-          "s3:GetBucketObjectLockConfiguration",
-          "s3:GetBucketRequestPayment",
-          "s3:GetEncryptionConfiguration",
-          "s3:GetLifecycleConfiguration",
-          "s3:GetReplicationConfiguration"
-        ]
+        Action = ["s3:Get*", "s3:List*"]
+        # Covers every read operation Terraform needs during plan
+        # (ACL, accelerate config, encryption, versioning, policy, etc.)
+        # Scoped to the frontend bucket only.
         Resource = [
           "arn:aws:s3:::${var.project}-frontend-*",
           "arn:aws:s3:::${var.project}-frontend-*/*"
