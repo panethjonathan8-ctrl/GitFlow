@@ -23,6 +23,8 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ include "gitflow-analyzer.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 90
+      # 5s preStop sleep + up to 60s for in-flight graph building + buffer.
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -31,6 +33,10 @@ spec:
         - name: graph-builder
           image: "{{ .Values.graphBuilder.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - name: http
               containerPort: {{ .Values.graphBuilder.port }}

@@ -145,22 +145,8 @@ module "aws_lb_controller" {
 }
 
 # ── Frontend CDN ──────────────────────────────────────────────────────────────
-data "kubernetes_ingress_v1" "app" {
-  metadata {
-    name      = "gitflow-analyzer"
-    namespace = "gitflow-analyzer"
-  }
-  # Reads the ALB hostname assigned by the AWS Load Balancer Controller.
-  # Used as the API origin for the CloudFront distribution below.
-  depends_on = [module.argocd]
-}
-
-module "frontend_cdn" {
-  source = "../../modules/frontend-cdn"
-
-  project      = var.project
-  env          = var.env
-  alb_dns_name = data.kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname
-
-  depends_on = [module.aws_lb_controller]
-}
+# CloudFront + S3 resources are managed outside Terraform for now.
+# The Kubernetes ingress data source that was here required the EKS cluster
+# to be running, which broke terraform plan when the cluster was down.
+# Proper fix: use data.aws_lb with tag-based lookup (AWS provider only,
+# no Kubernetes dependency). TODO: implement in a follow-up PR.
