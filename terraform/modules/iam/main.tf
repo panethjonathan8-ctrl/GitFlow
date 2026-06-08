@@ -288,19 +288,45 @@ resource "aws_iam_role_policy" "frontend_cdn" {
         Resource = "*"
       },
       {
-        Sid    = "SSMParameterStore"
+        Sid    = "SSMParameterReadWrite"
         Effect = "Allow"
         Action = [
           "ssm:GetParameter",
           "ssm:GetParameters",
           "ssm:PutParameter",
           "ssm:DeleteParameter",
-          "ssm:DescribeParameters",
           "ssm:AddTagsToResource",
           "ssm:ListTagsForResource"
         ]
         # Scoped to this project's parameters only.
         Resource = "arn:aws:ssm:*:${var.aws_account_id}:parameter/${var.project}/*"
+      },
+      {
+        Sid    = "SSMDescribe"
+        Effect = "Allow"
+        Action = ["ssm:DescribeParameters"]
+        # DescribeParameters cannot be scoped below account level — AWS
+        # requires Resource: * for this list/filter action.
+        Resource = "*"
+      },
+      {
+        Sid    = "FrontendS3BucketRead"
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketAcl",
+          "s3:GetBucketCORS",
+          "s3:GetBucketWebsite",
+          "s3:GetBucketLogging",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketRequestPayment",
+          "s3:GetEncryptionConfiguration",
+          "s3:GetLifecycleConfiguration",
+          "s3:GetReplicationConfiguration"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project}-frontend-*",
+          "arn:aws:s3:::${var.project}-frontend-*/*"
+        ]
       }
     ]
   })
