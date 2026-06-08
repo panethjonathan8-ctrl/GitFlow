@@ -23,6 +23,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ include "gitflow-analyzer.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 45
+      # 5s preStop sleep + up to 30s for in-flight proxied requests + buffer.
+      # result-api only proxies to other services so 45s is sufficient.
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -31,6 +34,10 @@ spec:
         - name: result-api
           image: "{{ .Values.resultApi.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - name: http
               containerPort: {{ .Values.resultApi.port }}

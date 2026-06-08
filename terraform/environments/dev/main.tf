@@ -152,7 +152,8 @@ data "kubernetes_ingress_v1" "app" {
   }
   # Reads the ALB hostname assigned by the AWS Load Balancer Controller.
   # Used as the API origin for the CloudFront distribution below.
-  depends_on = [module.argocd]
+  # No depends_on here — CloudFront is independent of EKS and must not
+  # be destroyed when EKS is torn down for the night.
 }
 
 module "frontend_cdn" {
@@ -161,6 +162,4 @@ module "frontend_cdn" {
   project      = var.project
   env          = var.env
   alb_dns_name = data.kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname
-
-  depends_on = [module.aws_lb_controller]
 }

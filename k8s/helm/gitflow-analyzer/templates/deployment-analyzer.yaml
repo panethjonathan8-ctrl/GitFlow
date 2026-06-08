@@ -23,6 +23,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ include "gitflow-analyzer.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 90
+      # 5s preStop sleep + up to 60s for in-flight analysis + buffer.
+      # Kubernetes sends SIGKILL after this — anything still running is force-killed.
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -31,6 +34,14 @@ spec:
         - name: analyzer
           image: "{{ .Values.analyzer.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+                # Delays SIGTERM by 5 seconds so the ALB has time to deregister
+                # this pod and stop routing new requests before Gunicorn shuts down.
+                # Without this, requests arriving in the deregistration window get
+                # connection refused errors.
           ports:
             - name: http
               containerPort: {{ .Values.analyzer.port }}
