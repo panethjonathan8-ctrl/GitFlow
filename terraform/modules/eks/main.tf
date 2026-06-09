@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # ── Cluster IAM Role ──────────────────────────────────────────────────────────
 resource "aws_iam_role" "cluster" {
   name = "${var.project}-${var.env}-eks-cluster-role"
@@ -167,6 +169,14 @@ resource "aws_eks_cluster" "main" {
   # Logs land in CloudWatch at /aws/eks/<cluster-name>/cluster.
   # scheduler and controllerManager are omitted — high-volume, rarely needed.
 
+  access_config {
+    authentication_mode = "API_AND_CONFIG_MAP"
+    # New clusters default to CONFIG_MAP which does not support access entries.
+    # API_AND_CONFIG_MAP enables both the legacy aws-auth ConfigMap and the
+    # newer access entry API that Terraform uses to grant kubectl access.
+    # Without this, terraform apply fails on the access entry resource.
+  }
+
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
   # Cluster creation fails if the IAM role does not have its policy yet.
   # explicit depends_on ensures the attachment exists before EKS tries to use the role.
@@ -307,6 +317,60 @@ resource "aws_eks_addon" "kube_proxy" {
   }
 }
 
+# ── EBS CSI Driver ────────────────────────────────────────────────────────────
+# On EKS 1.23+, the in-tree EBS volume plugin was replaced by the external
+# EBS CSI driver. Without this addon, PersistentVolumeClaims that use the gp2
+# storage class stay Pending forever with:
+#   "Waiting for a volume to be created by the external provisioner ebs.csi.aws.com"
+#
+# The driver needs an IAM role (via IRSA) so it can call ec2:CreateVolume,
+# ec2:AttachVolume etc. on your behalf when a PVC is created.
+resource "aws_iam_role" "ebs_csi_driver" {
+  name = "${var.project}-${var.env}-ebs-csi-driver"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.eks.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver.name
+  # AWS-managed policy that grants exactly the EC2 permissions the CSI driver
+  # needs: CreateVolume, DeleteVolume, AttachVolume, DetachVolume, etc.
+}
+
+resource "aws_eks_addon" "ebs_csi_driver" {
+  cluster_name             = aws_eks_cluster.main.name
+  addon_name               = "aws-ebs-csi-driver"
+  service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
+
+  depends_on = [aws_eks_node_group.main, aws_iam_role_policy_attachment.ebs_csi_driver]
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
 # ── GitHub Actions cluster access ─────────────────────────────────────────────
 # EKS has two separate authorization layers:
 #   1. IAM — controls who can call AWS APIs (create clusters, node groups, etc.)
@@ -343,4 +407,35 @@ resource "aws_eks_access_policy_association" "github_actions" {
   }
 
   depends_on = [aws_eks_access_entry.github_actions]
+}
+
+# ── Local dev user access ──────────────────────────────────────────────────────
+# The IAM user running terraform locally is named ${project}-${env} by convention.
+# Without this access entry, terraform apply can create the cluster but cannot
+# talk to the Kubernetes API to install ArgoCD or the LB controller — every
+# kubectl/helm call gets Unauthorized. The access entry must exist before any
+# Kubernetes provider resources are created, which is guaranteed here because
+# both access entries are in the same module and apply before the argocd and
+# aws-lb-controller modules that depend on module.eks.
+resource "aws_eks_access_entry" "dev_user" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.project}-${var.env}"
+  type          = "STANDARD"
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_eks_access_policy_association" "dev_user" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.project}-${var.env}"
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.dev_user]
 }

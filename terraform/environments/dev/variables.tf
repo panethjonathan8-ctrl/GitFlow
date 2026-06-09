@@ -42,3 +42,9 @@ variable "ec2_public_key" {
   description = "SSH public key content for EC2 access"
   type        = string
 }
+
+variable "grafana_admin_password" {
+  description = "Password for the Grafana admin UI — add this to terraform.tfvars"
+  type        = string
+  sensitive   = true
+}

@@ -47,6 +47,45 @@ resource "helm_release" "argocd" {
           # so you get TLS, a proper hostname, and auth at the edge.
         }
       }
+
+      # extraObjects injects arbitrary Kubernetes manifests as part of this
+      # Helm release. When terraform apply installs ArgoCD, it also creates
+      # the Application object — no manual kubectl apply step needed.
+      # When the cluster is destroyed and recreated, ArgoCD bootstraps itself
+      # and immediately starts syncing the gitflow-analyzer Helm chart.
+      extraObjects = [
+        {
+          apiVersion = "argoproj.io/v1alpha1"
+          kind       = "Application"
+          metadata = {
+            name       = var.project
+            namespace  = "argocd"
+            finalizers = ["resources-finalizer.argocd.argoproj.io"]
+          }
+          spec = {
+            project = "default"
+            source = {
+              repoURL        = "https://github.com/${var.github_username}/${var.github_repo}"
+              targetRevision = "main"
+              path           = "k8s/helm/gitflow-analyzer"
+              helm = {
+                valueFiles = ["values.yaml", "values-${var.env}.yaml"]
+              }
+            }
+            destination = {
+              server    = "https://kubernetes.default.svc"
+              namespace = var.project
+            }
+            syncPolicy = {
+              automated = {
+                prune    = true
+                selfHeal = true
+              }
+              syncOptions = ["CreateNamespace=true"]
+            }
+          }
+        }
+      ]
     })
   ]
 }

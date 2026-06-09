@@ -106,10 +106,11 @@ module "eks" {
 }
 
 module "argocd" {
-  source       = "../../modules/argocd"
-  project      = var.project
-  env          = var.env
-  cluster_name = module.eks.cluster_name
+  source          = "../../modules/argocd"
+  project         = var.project
+  env             = var.env
+  cluster_name    = module.eks.cluster_name
+  github_username = var.github_username
 
   depends_on = [module.eks]
   # ArgoCD can only be installed after the cluster and node group are fully
@@ -164,8 +165,8 @@ module "aws_lb_controller" {
 
 data "aws_lb" "app" {
   tags = {
-    "elbv2.k8s.aws/cluster"  = "${var.project}-${var.env}"
-    "ingress.k8s.aws/stack"  = "gitflow-analyzer/gitflow-analyzer"
+    "elbv2.k8s.aws/cluster" = "${var.project}-${var.env}"
+    "ingress.k8s.aws/stack" = "gitflow-analyzer/gitflow-analyzer"
   }
   # The AWS Load Balancer Controller tags every ALB it creates with these two
   # keys so we can find it by tag instead of by name (which changes on every
@@ -200,4 +201,17 @@ module "frontend_cdn" {
   project      = var.project
   env          = var.env
   alb_dns_name = data.aws_ssm_parameter.alb_dns_name.value
+}
+
+module "monitoring" {
+  source = "../../modules/monitoring"
+
+  project                = var.project
+  env                    = var.env
+  grafana_admin_password = var.grafana_admin_password
+
+  depends_on = [module.eks, module.argocd]
+  # Requires a running cluster with the Kubernetes provider available.
+  # Depends on argocd to ensure the cluster is fully bootstrapped before
+  # we add more workloads.
 }
