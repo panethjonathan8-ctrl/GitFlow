@@ -106,10 +106,11 @@ module "eks" {
 }
 
 module "argocd" {
-  source       = "../../modules/argocd"
-  project      = var.project
-  env          = var.env
-  cluster_name = module.eks.cluster_name
+  source          = "../../modules/argocd"
+  project         = var.project
+  env             = var.env
+  cluster_name    = module.eks.cluster_name
+  github_username = var.github_username
 
   depends_on = [module.eks]
   # ArgoCD can only be installed after the cluster and node group are fully

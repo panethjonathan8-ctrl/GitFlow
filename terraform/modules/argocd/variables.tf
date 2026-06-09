@@ -20,3 +20,14 @@ variable "argocd_chart_version" {
   # ArgoCD chart 7.7.16 = ArgoCD app version v2.13.4
   # Check for newer versions at: https://artifacthub.io/packages/helm/argo/argo-cd
 }
+
+variable "github_username" {
+  description = "GitHub username — used to build the repo URL for the ArgoCD Application"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name — the repo ArgoCD watches for Helm chart changes"
+  type        = string
+  default     = "GitFlow"
+}
