@@ -14,6 +14,14 @@ on:
     paths:
       - 'terraform/**'
 
+concurrency:
+  group: terraform-plan-${{ github.ref }}
+  cancel-in-progress: true
+# Only one terraform plan runs at a time per branch. If a new push arrives
+# while a plan is already running, the old run is cancelled and the new one
+# starts fresh. This prevents two runs from trying to acquire the same
+# Terraform state lock simultaneously, which causes a PreconditionFailed error.
+
 permissions:
   id-token: write
   # CRITICAL: This permission is what allows the workflow to request
@@ -83,6 +91,7 @@ jobs:
           TF_VAR_aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
           TF_VAR_github_username: ${{ vars.THE_USERNAME }}
           TF_VAR_ec2_public_key: ${{ vars.EC2_PUBLIC_KEY }}
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           # TF_VAR_ prefix is how you pass Terraform variables from
           # environment variables. This keeps the values out of your
           # tfvars files in CI while still being available to Terraform.
