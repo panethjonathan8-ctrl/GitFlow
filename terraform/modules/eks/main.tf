@@ -317,6 +317,60 @@ resource "aws_eks_addon" "kube_proxy" {
   }
 }
 
+# ── EBS CSI Driver ────────────────────────────────────────────────────────────
+# On EKS 1.23+, the in-tree EBS volume plugin was replaced by the external
+# EBS CSI driver. Without this addon, PersistentVolumeClaims that use the gp2
+# storage class stay Pending forever with:
+#   "Waiting for a volume to be created by the external provisioner ebs.csi.aws.com"
+#
+# The driver needs an IAM role (via IRSA) so it can call ec2:CreateVolume,
+# ec2:AttachVolume etc. on your behalf when a PVC is created.
+resource "aws_iam_role" "ebs_csi_driver" {
+  name = "${var.project}-${var.env}-ebs-csi-driver"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.eks.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver.name
+  # AWS-managed policy that grants exactly the EC2 permissions the CSI driver
+  # needs: CreateVolume, DeleteVolume, AttachVolume, DetachVolume, etc.
+}
+
+resource "aws_eks_addon" "ebs_csi_driver" {
+  cluster_name             = aws_eks_cluster.main.name
+  addon_name               = "aws-ebs-csi-driver"
+  service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
+
+  depends_on = [aws_eks_node_group.main, aws_iam_role_policy_attachment.ebs_csi_driver]
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
 # ── GitHub Actions cluster access ─────────────────────────────────────────────
 # EKS has two separate authorization layers:
 #   1. IAM — controls who can call AWS APIs (create clusters, node groups, etc.)
