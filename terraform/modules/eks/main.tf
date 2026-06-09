@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # ── Cluster IAM Role ──────────────────────────────────────────────────────────
 resource "aws_iam_role" "cluster" {
   name = "${var.project}-${var.env}-eks-cluster-role"
@@ -166,6 +168,14 @@ resource "aws_eks_cluster" "main" {
   # authenticator: all IAM-to-Kubernetes authentication attempts
   # Logs land in CloudWatch at /aws/eks/<cluster-name>/cluster.
   # scheduler and controllerManager are omitted — high-volume, rarely needed.
+
+  access_config {
+    authentication_mode = "API_AND_CONFIG_MAP"
+    # New clusters default to CONFIG_MAP which does not support access entries.
+    # API_AND_CONFIG_MAP enables both the legacy aws-auth ConfigMap and the
+    # newer access entry API that Terraform uses to grant kubectl access.
+    # Without this, terraform apply fails on the access entry resource.
+  }
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
   # Cluster creation fails if the IAM role does not have its policy yet.
@@ -343,4 +353,35 @@ resource "aws_eks_access_policy_association" "github_actions" {
   }
 
   depends_on = [aws_eks_access_entry.github_actions]
+}
+
+# ── Local dev user access ──────────────────────────────────────────────────────
+# The IAM user running terraform locally is named ${project}-${env} by convention.
+# Without this access entry, terraform apply can create the cluster but cannot
+# talk to the Kubernetes API to install ArgoCD or the LB controller — every
+# kubectl/helm call gets Unauthorized. The access entry must exist before any
+# Kubernetes provider resources are created, which is guaranteed here because
+# both access entries are in the same module and apply before the argocd and
+# aws-lb-controller modules that depend on module.eks.
+resource "aws_eks_access_entry" "dev_user" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.project}-${var.env}"
+  type          = "STANDARD"
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_eks_access_policy_association" "dev_user" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.project}-${var.env}"
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.dev_user]
 }
