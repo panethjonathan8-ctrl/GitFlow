@@ -31,3 +31,8 @@ variable "github_repo" {
   type        = string
   default     = "GitFlow"
 }
+
+variable "aws_region" {
+  description = "AWS region — used to configure kubectl after the cluster is created"
+  type        = string
+}
