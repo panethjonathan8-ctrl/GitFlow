@@ -1,3 +1,72 @@
+locals {
+  # Alloy uses the River configuration language.
+  # This single config handles both log collection (→ Loki) and
+  # trace reception (→ Tempo) so we only need one agent DaemonSet.
+  alloy_config = <<-EOT
+    // ── Pod log collection ──────────────────────────────────────────────────────
+    // Discovers every pod on this node and ships stdout/stderr to Loki.
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_container_name"]
+        target_label  = "container"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "app"
+      }
+    }
+
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.write.default.receiver]
+    }
+
+    loki.write "default" {
+      endpoint {
+        url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+
+    // ── Trace reception ─────────────────────────────────────────────────────────
+    // Listens for OTLP traces from the Flask services on gRPC (4317) and
+    // HTTP (4318), then forwards them to Tempo.
+    otelcol.receiver.otlp "default" {
+      grpc {
+        endpoint = "0.0.0.0:4317"
+      }
+      http {
+        endpoint = "0.0.0.0:4318"
+      }
+      output {
+        traces = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "tempo.monitoring.svc.cluster.local:4317"
+        tls {
+          insecure = true
+        }
+      }
+    }
+  EOT
+}
+
 resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = "monitoring"
@@ -9,6 +78,7 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
+# ── Prometheus + Grafana + AlertManager ───────────────────────────────────────
 resource "helm_release" "kube_prometheus_stack" {
   name       = "monitoring"
   repository = "https://prometheus-community.github.io/helm-charts"
@@ -17,8 +87,6 @@ resource "helm_release" "kube_prometheus_stack" {
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
 
   timeout = 600
-  # kube-prometheus-stack installs many CRDs and controllers.
-  # The default 300s timeout is sometimes not enough on a fresh cluster.
 
   values = [
     yamlencode({
@@ -35,8 +103,6 @@ resource "helm_release" "kube_prometheus_stack" {
           storageSpec = {
             volumeClaimTemplate = {
               spec = {
-                # gp2 is the default EBS storage class that ships with EKS.
-                # It provisions an SSD-backed EBS volume in the same AZ as the pod.
                 storageClassName = "gp2"
                 accessModes      = ["ReadWriteOnce"]
                 resources = {
@@ -57,9 +123,35 @@ resource "helm_release" "kube_prometheus_stack" {
           limits   = { cpu = "200m", memory = "256Mi" }
         }
 
-        # Grafana dashboards are auto-provisioned from ConfigMaps on every start.
-        # No persistent disk needed — dashboards come back automatically.
         persistence = { enabled = false }
+
+        # Data sources are provisioned automatically on every Grafana start.
+        # Adding them here means no manual setup in the UI after a cluster rebuild.
+        additionalDataSources = [
+          {
+            name      = "Loki"
+            type      = "loki"
+            url       = "http://loki.monitoring.svc.cluster.local:3100"
+            access    = "proxy"
+            isDefault = false
+          },
+          {
+            name      = "Tempo"
+            type      = "tempo"
+            url       = "http://tempo.monitoring.svc.cluster.local:3100"
+            access    = "proxy"
+            isDefault = false
+            jsonData = {
+              httpMethod        = "GET"
+              # Links traces to logs in Loki — click a trace in Tempo and
+              # Grafana jumps to the matching log lines automatically.
+              tracesToLogsV2 = {
+                datasourceUid = "loki"
+                filterByTraceID = true
+              }
+            }
+          }
+        ]
       }
 
       # ── AlertManager ────────────────────────────────────────────────────────
@@ -73,8 +165,6 @@ resource "helm_release" "kube_prometheus_stack" {
       }
 
       # ── Node Exporter ────────────────────────────────────────────────────────
-      # Runs as a DaemonSet — one pod per node. Exposes CPU, RAM, disk, network
-      # metrics for the underlying EC2 instance. Very lightweight.
       "prometheus-node-exporter" = {
         resources = {
           requests = { cpu = "50m", memory = "32Mi" }
@@ -83,9 +173,6 @@ resource "helm_release" "kube_prometheus_stack" {
       }
 
       # ── kube-state-metrics ───────────────────────────────────────────────────
-      # Watches Kubernetes objects (Deployments, Pods, etc.) and exposes metrics
-      # like pod restart count, deployment replica status, resource requests vs
-      # limits. This is where "how many times did my pod crash?" comes from.
       "kube-state-metrics" = {
         resources = {
           requests = { cpu = "50m", memory = "64Mi" }
@@ -96,4 +183,162 @@ resource "helm_release" "kube_prometheus_stack" {
   ]
 
   depends_on = [kubernetes_namespace.monitoring]
+}
+
+# ── Loki ─────────────────────────────────────────────────────────────────────
+# Single binary mode: all Loki components in one pod. Right-sized for dev —
+# no replication, filesystem storage backed by a single EBS volume.
+resource "helm_release" "loki" {
+  name       = "loki"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "loki"
+  version    = var.loki_chart_version
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+
+  timeout = 300
+
+  values = [
+    yamlencode({
+      deploymentMode = "SingleBinary"
+
+      loki = {
+        auth_enabled = false
+        # auth_enabled: false — no multi-tenant setup needed for dev.
+        # Every log query returns results across all namespaces.
+
+        commonConfig = {
+          replication_factor = 1
+        }
+
+        storage = {
+          type = "filesystem"
+          # Stores log chunks directly on the EBS volume.
+          # No S3 or object storage needed for a dev environment.
+        }
+      }
+
+      singleBinary = {
+        replicas = 1
+        persistence = {
+          enabled      = true
+          size         = var.loki_storage_size
+          storageClass = "gp2"
+        }
+        resources = {
+          requests = { cpu = "100m", memory = "256Mi" }
+          limits   = { cpu = "200m", memory = "512Mi" }
+        }
+      }
+
+      # Disable the read/write/backend components used in scalable mode.
+      read    = { replicas = 0 }
+      write   = { replicas = 0 }
+      backend = { replicas = 0 }
+
+      # The gateway is an nginx proxy in front of Loki — not needed when
+      # everything is in the same cluster talking directly to the service.
+      gateway = { enabled = false }
+    })
+  ]
+
+  depends_on = [kubernetes_namespace.monitoring]
+}
+
+# ── Tempo ─────────────────────────────────────────────────────────────────────
+# Single binary mode: all Tempo components in one pod.
+# Receives traces on port 4317 (gRPC OTLP) from Alloy.
+# Serves trace queries to Grafana on port 3100.
+resource "helm_release" "tempo" {
+  name       = "tempo"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "tempo"
+  version    = var.tempo_chart_version
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+
+  timeout = 300
+
+  values = [
+    yamlencode({
+      tempo = {
+        storage = {
+          trace = {
+            backend = "local"
+            local = {
+              path = "/var/tempo/traces"
+            }
+          }
+        }
+      }
+
+      persistence = {
+        enabled      = true
+        size         = var.tempo_storage_size
+        storageClass = "gp2"
+      }
+
+      resources = {
+        requests = { cpu = "100m", memory = "256Mi" }
+        limits   = { cpu = "200m", memory = "512Mi" }
+      }
+    })
+  ]
+
+  depends_on = [kubernetes_namespace.monitoring]
+}
+
+# ── Grafana Alloy ─────────────────────────────────────────────────────────────
+# DaemonSet — one pod per node.
+# Does two jobs: ships pod logs to Loki and receives OTLP traces → Tempo.
+# Replaces both Promtail (log agent) and a standalone OTel Collector.
+resource "helm_release" "alloy" {
+  name       = "alloy"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "alloy"
+  version    = var.alloy_chart_version
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+
+  timeout = 300
+
+  values = [
+    yamlencode({
+      alloy = {
+        configMap = {
+          content = local.alloy_config
+        }
+
+        # Expose OTLP ports so Flask services can send traces to Alloy.
+        # gRPC on 4317, HTTP on 4318 — we use HTTP from the Python OTel SDK.
+        extraPorts = [
+          {
+            name       = "otlp-grpc"
+            port       = 4317
+            targetPort = 4317
+            protocol   = "TCP"
+          },
+          {
+            name       = "otlp-http"
+            port       = 4318
+            targetPort = 4318
+            protocol   = "TCP"
+          }
+        ]
+      }
+
+      controller = {
+        type = "daemonset"
+        # DaemonSet ensures one Alloy pod runs on every node.
+        # This is required for loki.source.kubernetes — the component
+        # reads log files from the node's filesystem, so it must run
+        # on the same node as the pods whose logs it is collecting.
+      }
+
+      resources = {
+        requests = { cpu = "50m", memory = "128Mi" }
+        limits   = { cpu = "200m", memory = "256Mi" }
+      }
+    })
+  ]
+
+  depends_on = [helm_release.loki, helm_release.tempo]
+  # Wait for Loki and Tempo to be up before Alloy starts trying to push to them.
 }

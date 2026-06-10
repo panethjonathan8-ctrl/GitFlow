@@ -35,6 +35,38 @@ variable "chart_version" {
   description = "Version of the kube-prometheus-stack Helm chart to install"
   type        = string
   default     = "67.5.0"
-  # Pin to an explicit version so upgrades are deliberate, not accidental.
-  # Check https://github.com/prometheus-community/helm-charts/releases for updates.
+}
+
+variable "loki_chart_version" {
+  description = "Version of the Loki Helm chart"
+  type        = string
+  default     = "6.7.4"
+  # Loki 6.x = Loki app version 3.x (single binary mode).
+  # Check https://github.com/grafana/loki/releases for updates.
+}
+
+variable "tempo_chart_version" {
+  description = "Version of the Tempo Helm chart"
+  type        = string
+  default     = "1.10.3"
+  # Check https://github.com/grafana/helm-charts/releases for updates.
+}
+
+variable "loki_storage_size" {
+  description = "Size of the EBS volume for Loki log storage"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "tempo_storage_size" {
+  description = "Size of the EBS volume for Tempo trace storage"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "alloy_chart_version" {
+  description = "Version of the Grafana Alloy Helm chart"
+  type        = string
+  default     = "0.9.2"
+  # Alloy replaces Grafana Agent. Check https://github.com/grafana/alloy/releases.
 }
