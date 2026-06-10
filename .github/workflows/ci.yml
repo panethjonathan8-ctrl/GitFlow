@@ -24,5 +24,3 @@ jobs:
       - name: Build result-api
         run: docker build services/result-api/ --tag gitflow-analyzer/result-api:ci
 
-      - name: Build frontend
-        run: docker build services/frontend/ --tag gitflow-analyzer/frontend:ci
