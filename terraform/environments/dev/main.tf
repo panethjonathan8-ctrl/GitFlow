@@ -18,6 +18,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
 
   backend "s3" {
@@ -110,6 +114,7 @@ module "argocd" {
   project         = var.project
   env             = var.env
   cluster_name    = module.eks.cluster_name
+  aws_region      = var.aws_region
   github_username = var.github_username
 
   depends_on = [module.eks]
