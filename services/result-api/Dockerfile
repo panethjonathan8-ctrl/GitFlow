@@ -5,6 +5,7 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir --user -r requirements.txt
 
 FROM python:3.12-slim AS runtime
+RUN pip install --no-cache-dir setuptools
 RUN groupadd --gid 1001 appgroup && \
     useradd --uid 1001 --gid appgroup --no-create-home appuser
 WORKDIR /app
