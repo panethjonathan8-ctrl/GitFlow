@@ -2,6 +2,7 @@ import os
 import logging
 from flask import Flask, request, jsonify
 from analyzer import analyze_repo
+from prometheus_flask_exporter import PrometheusMetrics
 
 logging.basicConfig(
     level=logging.INFO,
@@ -10,6 +11,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app, excluded_paths=["/health"])
+metrics.info("app_info", "Application info", service="analyzer")
 
 
 @app.route("/health", methods=["GET"])
