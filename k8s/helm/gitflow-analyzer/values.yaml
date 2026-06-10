@@ -88,6 +88,13 @@ resultApi:
     # to the ClusterIP of the analyzer Service automatically.
 
 
+# ── Monitoring ────────────────────────────────────────────────────────────────
+monitoring:
+  enabled: true
+  # Set to false if kube-prometheus-stack is not installed in the cluster.
+  # When true, a ServiceMonitor is created so Prometheus scrapes /metrics on
+  # all three services every 30 seconds.
+
 # ── HPA ───────────────────────────────────────────────────────────────────────
 hpa:
   enabled: false

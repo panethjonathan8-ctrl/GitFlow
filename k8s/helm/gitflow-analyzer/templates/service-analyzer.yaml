@@ -11,6 +11,7 @@ spec:
     app.kubernetes.io/name: analyzer
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: {{ .Values.analyzer.port }}
       targetPort: {{ .Values.analyzer.port }}

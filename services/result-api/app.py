@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 from flask import Flask, request, jsonify
+from prometheus_flask_exporter import PrometheusMetrics
 
 logging.basicConfig(
     level=logging.INFO,
@@ -10,6 +11,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app, excluded_paths=["/health"])
+metrics.info("app_info", "Application info", service="result-api")
 
 # Service URLs — configurable via environment variables.
 # In docker-compose these use service names.

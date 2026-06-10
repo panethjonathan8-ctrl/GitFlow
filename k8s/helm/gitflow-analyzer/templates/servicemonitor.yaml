@@ -1,0 +1,26 @@
+{{- if .Values.monitoring.enabled }}
+# ServiceMonitor tells the Prometheus Operator to scrape the three app services.
+# kube-prometheus-stack installs the Prometheus Operator, which watches for
+# ServiceMonitor resources and adds them to Prometheus's scrape config automatically.
+# The "release: monitoring" label is required — the Operator only picks up
+# ServiceMonitors that match its serviceMonitorSelector, which defaults to
+# release: <helm-release-name>. Our monitoring release is named "monitoring".
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "gitflow-analyzer.fullname" . }}
+  labels:
+    release: monitoring
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+{{- end }}
