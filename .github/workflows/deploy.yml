@@ -101,11 +101,14 @@ jobs:
 
       - name: Invalidate CloudFront cache
         run: |
+          DIST_ID=$(aws ssm get-parameter \
+            --name "/gitflow-analyzer/dev/cloudfront-distribution-id" \
+            --query "Parameter.Value" --output text)
           aws cloudfront create-invalidation \
-            --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id "$DIST_ID" \
             --paths "/*" \
             --no-cli-pager
-          echo "CloudFront cache invalidated"
+          echo "CloudFront cache invalidated (distribution: $DIST_ID)"
 
       # ── Backend: update image tag, ArgoCD rolls out to EKS ───────────────
 
