@@ -215,6 +215,23 @@ resource "helm_release" "loki" {
           # Stores log chunks directly on the EBS volume.
           # No S3 or object storage needed for a dev environment.
         }
+
+        # Loki 6.x requires an explicit schema_config — it no longer ships
+        # a default. v13 with tsdb is the current recommended schema.
+        schemaConfig = {
+          configs = [
+            {
+              from         = "2024-01-01"
+              store        = "tsdb"
+              object_store = "filesystem"
+              schema       = "v13"
+              index = {
+                prefix = "index_"
+                period = "24h"
+              }
+            }
+          ]
+        }
       }
 
       singleBinary = {
@@ -238,6 +255,11 @@ resource "helm_release" "loki" {
       # The gateway is an nginx proxy in front of Loki — not needed when
       # everything is in the same cluster talking directly to the service.
       gateway = { enabled = false }
+
+      # Memcached caches — disabled for dev to avoid extra Pending pods.
+      # In production these would reduce Loki query latency significantly.
+      chunksCache  = { enabled = false }
+      resultsCache = { enabled = false }
     })
   ]
 
@@ -271,9 +293,9 @@ resource "helm_release" "tempo" {
       }
 
       persistence = {
-        enabled      = true
-        size         = var.tempo_storage_size
-        storageClass = "gp2"
+        enabled           = true
+        size              = var.tempo_storage_size
+        storageClassName  = "gp2"
       }
 
       resources = {
