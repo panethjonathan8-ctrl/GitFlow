@@ -179,3 +179,18 @@ resource "aws_cloudfront_distribution" "main" {
     Environment = var.env
   }
 }
+
+# ── SSM: persist distribution ID ─────────────────────────────────────────────
+# The deploy workflow reads this instead of a hardcoded GitHub variable.
+# Every terraform apply overwrites it with the current distribution ID so
+# cache invalidation always targets the right distribution automatically.
+resource "aws_ssm_parameter" "cloudfront_distribution_id" {
+  name  = "/${var.project}/${var.env}/cloudfront-distribution-id"
+  type  = "String"
+  value = aws_cloudfront_distribution.main.id
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
