@@ -3,11 +3,6 @@ import logging
 from flask import Flask, request, jsonify
 from analyzer import analyze_repo
 from prometheus_flask_exporter import PrometheusMetrics
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,13 +13,6 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 metrics = PrometheusMetrics(app, excluded_paths=["/health"])
 metrics.info("app_info", "Application info", service="analyzer")
-
-_provider = TracerProvider()
-_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(
-    endpoint="http://alloy.monitoring.svc.cluster.local:4318/v1/traces"
-)))
-trace.set_tracer_provider(_provider)
-FlaskInstrumentor().instrument_app(app)
 
 
 @app.route("/health", methods=["GET"])
