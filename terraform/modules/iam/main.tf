@@ -217,6 +217,24 @@ resource "aws_iam_role_policy" "terraform_infra" {
         Resource = "*"
       },
       {
+        Sid    = "ELBRead"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:DescribeTags"
+        ]
+        # Required by terraform plan — data "aws_lb" looks up the ALB by tags
+        # to get its DNS name for the CloudFront origin. Read-only: Terraform
+        # does not create or modify the ALB (the LB Controller does that).
+        Resource = "*"
+      },
+      {
         Sid    = "STSRead"
         Effect = "Allow"
         Action = [
