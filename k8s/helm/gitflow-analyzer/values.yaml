@@ -117,6 +117,19 @@ hpa:
     minReplicas: 1
     maxReplicas: 3
 
+# ── PDB ───────────────────────────────────────────────────────────────────────
+pdb:
+  enabled: false
+  # minAvailable: 1 keeps at least one pod running during voluntary disruptions.
+  # If only 1 replica exists, a node drain will be blocked until HPA scales up
+  # a second pod — intentional behaviour that prevents silent downtime.
+  analyzer:
+    minAvailable: 1
+  graphBuilder:
+    minAvailable: 1
+  resultApi:
+    minAvailable: 1
+
 # ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
   enabled: false
