@@ -62,6 +62,7 @@ resource "null_resource" "argocd_application" {
 
   triggers = {
     cluster_name = var.cluster_name
+    aws_region   = var.aws_region
     # Re-runs if the application manifest changes
     manifest_hash = filesha256("${path.root}/../../../k8s/argocd/application.yaml")
   }
@@ -74,6 +75,22 @@ resource "null_resource" "argocd_application" {
         --namespace argocd --timeout=180s
       kubectl apply -f "${path.root}/../../../k8s/argocd/application.yaml"
       echo "ArgoCD Application registered — sync will begin within ~3 minutes"
+    EOT
+  }
+
+  # Runs during terraform destroy BEFORE the ArgoCD Helm release is deleted.
+  # Without this, the ArgoCD app controller is gone before the Application
+  # object is cleaned up, leaving its finalizer stuck and the namespace
+  # permanently in Terminating. The || true on each command ensures a missing
+  # cluster or already-deleted Application never blocks the destroy.
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name "${self.triggers.cluster_name}" --region "${self.triggers.aws_region}" || true
+      kubectl patch application gitflow-analyzer -n argocd \
+        -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+      kubectl delete application gitflow-analyzer -n argocd --ignore-not-found=true 2>/dev/null || true
+      echo "ArgoCD Application finalizers cleared"
     EOT
   }
 }
