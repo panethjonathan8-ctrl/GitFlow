@@ -21,6 +21,9 @@ serviceAccount:
     # EKS sees it and injects temporary AWS credentials scoped to this role.
     # Run `terraform output -module=irsa role_arn` after apply to confirm the ARN.
 
+hpa:
+  enabled: true
+
 ingress:
   enabled: true
   # Requires the AWS Load Balancer Controller to be running in the cluster.

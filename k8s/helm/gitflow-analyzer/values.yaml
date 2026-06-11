@@ -98,11 +98,24 @@ monitoring:
 # ── HPA ───────────────────────────────────────────────────────────────────────
 hpa:
   enabled: false
-  minReplicas: 1
-  maxReplicas: 3
+  # Requires the Kubernetes Metrics Server to be installed in the cluster.
+  # Metrics Server is deployed via terraform/modules/monitoring/main.tf.
+
+  # CPU threshold at which a new pod is added (applies to all three services).
   targetCPUUtilizationPercentage: 70
-  # Disabled by default — requires the Kubernetes Metrics Server to be installed.
-  # Enable after the Metrics Server add-on is added to the EKS cluster.
+
+  # Per-service replica limits — each service scales independently.
+  # analyzer gets the highest max because it does the heaviest work:
+  # cloning repos and running pygments over every file in the tree.
+  analyzer:
+    minReplicas: 1
+    maxReplicas: 5
+  graphBuilder:
+    minReplicas: 1
+    maxReplicas: 3
+  resultApi:
+    minReplicas: 1
+    maxReplicas: 3
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
