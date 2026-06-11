@@ -1,18 +1,63 @@
 {{- if .Values.hpa.enabled }}
+# Three separate HPAs — one per service.
+# Each scales independently based on its own CPU usage.
+# analyzer gets the highest maxReplicas because it does the heavy lifting:
+# cloning repos and running pygments over every file.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analyzer
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analyzer
+  minReplicas: {{ .Values.hpa.analyzer.minReplicas }}
+  maxReplicas: {{ .Values.hpa.analyzer.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: graph-builder
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: graph-builder
+  minReplicas: {{ .Values.hpa.graphBuilder.minReplicas }}
+  maxReplicas: {{ .Values.hpa.graphBuilder.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: result-api
   labels:
-    app.kubernetes.io/name: result-api
     {{- include "gitflow-analyzer.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: result-api
-  minReplicas: {{ .Values.hpa.minReplicas }}
-  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  minReplicas: {{ .Values.hpa.resultApi.minReplicas }}
+  maxReplicas: {{ .Values.hpa.resultApi.maxReplicas }}
   metrics:
     - type: Resource
       resource:

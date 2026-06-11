@@ -377,6 +377,24 @@ resource "helm_release" "alloy" {
   # Wait for Loki and Tempo to be up before Alloy starts trying to push to them.
 }
 
+# ── Metrics Server ───────────────────────────────────────────────────────────
+# Required for HPA to read CPU and memory usage from pods.
+# Without this, HPA cannot get metrics and will never scale.
+# EKS does not install Metrics Server by default — it must be added manually.
+resource "helm_release" "metrics_server" {
+  name       = "metrics-server"
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = "3.12.1"
+  namespace  = "kube-system"
+
+  values = [yamlencode({
+    args = ["--kubelet-insecure-tls"]
+    # EKS node kubelets use a self-signed certificate. This flag tells
+    # Metrics Server not to verify it — safe inside the cluster VPC.
+  })]
+}
+
 # ── Grafana Dashboard ─────────────────────────────────────────────────────────
 # The kube-prometheus-stack sidecar watches for ConfigMaps labelled
 # grafana_dashboard="1" in the monitoring namespace and hot-loads them into
