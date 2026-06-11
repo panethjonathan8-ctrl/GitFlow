@@ -24,6 +24,9 @@ serviceAccount:
 hpa:
   enabled: true
 
+pdb:
+  enabled: true
+
 ingress:
   enabled: true
   # Requires the AWS Load Balancer Controller to be running in the cluster.

@@ -1,0 +1,45 @@
+{{- if .Values.pdb.enabled }}
+# Three PDBs — one per service.
+# minAvailable: 1 means Kubernetes must keep at least 1 pod running during
+# voluntary disruptions (node drains, rolling updates, cluster upgrades).
+# If only 1 replica exists, the drain is blocked until a second is available —
+# that is intentional: it forces a conscious decision rather than silent downtime.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analyzer
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.analyzer.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: analyzer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: graph-builder
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.graphBuilder.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: graph-builder
+      app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: result-api
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.resultApi.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: result-api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
