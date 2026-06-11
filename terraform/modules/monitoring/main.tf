@@ -131,6 +131,9 @@ resource "helm_release" "kube_prometheus_stack" {
           {
             name      = "Loki"
             type      = "loki"
+            uid       = "loki"
+            # Explicit UID so the Tempo trace-to-logs link always resolves
+            # correctly, even after a cluster rebuild.
             url       = "http://loki.monitoring.svc.cluster.local:3100"
             access    = "proxy"
             isDefault = false
@@ -138,16 +141,25 @@ resource "helm_release" "kube_prometheus_stack" {
           {
             name      = "Tempo"
             type      = "tempo"
+            uid       = "tempo"
             url       = "http://tempo.monitoring.svc.cluster.local:3100"
             access    = "proxy"
             isDefault = false
             jsonData = {
-              httpMethod        = "GET"
-              # Links traces to logs in Loki — click a trace in Tempo and
-              # Grafana jumps to the matching log lines automatically.
+              httpMethod = "GET"
+              # Click a trace span in Tempo and Grafana jumps straight to
+              # the matching log lines in Loki for that trace ID.
               tracesToLogsV2 = {
-                datasourceUid = "loki"
+                datasourceUid  = "loki"
                 filterByTraceID = true
+              }
+              # Pulls service graph metrics from Prometheus once OTel
+              # instrumentation is added (step 2).
+              serviceMap = {
+                datasourceUid = "prometheus"
+              }
+              nodeGraph = {
+                enabled = true
               }
             }
           }
@@ -363,4 +375,24 @@ resource "helm_release" "alloy" {
 
   depends_on = [helm_release.loki, helm_release.tempo]
   # Wait for Loki and Tempo to be up before Alloy starts trying to push to them.
+}
+
+# ── Grafana Dashboard ─────────────────────────────────────────────────────────
+# The kube-prometheus-stack sidecar watches for ConfigMaps labelled
+# grafana_dashboard="1" in the monitoring namespace and hot-loads them into
+# Grafana automatically — no pod restart needed.
+resource "kubernetes_config_map" "grafana_dashboard_app" {
+  metadata {
+    name      = "gitflow-app-dashboard"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "gitflow-app.json" = file("${path.module}/dashboards/gitflow-app.json")
+  }
+
+  depends_on = [helm_release.kube_prometheus_stack]
 }
