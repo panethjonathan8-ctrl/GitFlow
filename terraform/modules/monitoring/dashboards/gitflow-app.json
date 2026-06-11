@@ -102,7 +102,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{namespace=\"gitflow-analyzer\", container=~\"$service\"}",
+          "expr": "{namespace=\"gitflow-analyzer\", app=~\"$service\"}",
           "refId": "A"
         }
       ],
