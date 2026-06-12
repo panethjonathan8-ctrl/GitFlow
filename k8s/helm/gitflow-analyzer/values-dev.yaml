@@ -27,6 +27,9 @@ hpa:
 pdb:
   enabled: true
 
+networkPolicy:
+  enabled: true
+
 ingress:
   enabled: true
   # Requires the AWS Load Balancer Controller to be running in the cluster.

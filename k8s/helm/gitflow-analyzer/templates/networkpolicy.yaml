@@ -1,0 +1,75 @@
+{{- if .Values.networkPolicy.enabled }}
+# Three NetworkPolicies — one per service.
+# Each policy creates an implicit deny-all for its pods, then explicitly
+# allows only the traffic paths that should exist:
+#   result-api → analyzer      (port 5001)
+#   result-api → graph-builder (port 5002)
+#   ALB        → result-api    (port 5000, from anywhere — ALB uses VPC IPs)
+#   Prometheus  → all services (scraping — from monitoring namespace)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: analyzer
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: analyzer
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: result-api
+              app.kubernetes.io/instance: {{ .Release.Name }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 5001
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: graph-builder
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: graph-builder
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: result-api
+              app.kubernetes.io/instance: {{ .Release.Name }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 5002
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: result-api
+  labels:
+    {{- include "gitflow-analyzer.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: result-api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 5000
+{{- end }}
