@@ -119,6 +119,15 @@ hpa:
     minReplicas: 1
     maxReplicas: 3
 
+# ── Network Policy ────────────────────────────────────────────────────────────
+networkPolicy:
+  enabled: false
+  # When enabled, each service only accepts ingress from the allowed sources:
+  #   analyzer      ← result-api pods, monitoring namespace (Prometheus)
+  #   graph-builder ← result-api pods, monitoring namespace (Prometheus)
+  #   result-api    ← anywhere on port 5000 (ALB sends from VPC IPs)
+  # All other ingress is implicitly denied by the policy itself.
+
 # ── PDB ───────────────────────────────────────────────────────────────────────
 pdb:
   enabled: false
