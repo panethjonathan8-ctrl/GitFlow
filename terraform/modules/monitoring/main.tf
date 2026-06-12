@@ -78,6 +78,25 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
+# ── Grafana GitHub OAuth secret ───────────────────────────────────────────────
+# The client secret must not appear in the Helm values (those end up in
+# Terraform state in plain text). Instead we store it in a Kubernetes Secret
+# and tell Grafana to read it from the environment via envFromSecret.
+# The secret key name starts with GF_ so Grafana's env-var config system
+# picks it up automatically via $__env{} in grafana.ini.
+resource "kubernetes_secret" "grafana_github_oauth" {
+  metadata {
+    name      = "grafana-github-oauth"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  data = {
+    GF_AUTH_GITHUB_CLIENT_SECRET = var.github_oauth_client_secret
+  }
+
+  depends_on = [kubernetes_namespace.monitoring]
+}
+
 # ── Prometheus + Grafana + AlertManager ───────────────────────────────────────
 resource "helm_release" "kube_prometheus_stack" {
   name       = "monitoring"
@@ -118,12 +137,79 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana = {
         adminPassword = var.grafana_admin_password
 
+        # Load the OAuth client secret from the kubernetes_secret we created
+        # above. Every key in that secret becomes an env var in the Grafana pod.
+        # grafana.ini below references the secret via $__env{} syntax.
+        envFromSecret = "grafana-github-oauth"
+
         resources = {
           requests = { cpu = "100m", memory = "128Mi" }
           limits   = { cpu = "200m", memory = "256Mi" }
         }
 
         persistence = { enabled = false }
+
+        # Grafana Ingress — joins the shared ALB IngressGroup so Grafana is
+        # reachable at https://gitflow.space/dashboard.
+        # group.order 10 means Grafana path rules are checked BEFORE the
+        # gitflow-analyzer rules (order 20), preventing /dashboard requests
+        # from accidentally matching the app's catch-all routes.
+        ingress = {
+          enabled           = true
+          ingressClassName  = "alb"
+          annotations = {
+            "alb.ingress.kubernetes.io/scheme"       = "internet-facing"
+            "alb.ingress.kubernetes.io/target-type"  = "ip"
+            "alb.ingress.kubernetes.io/group.name"   = "gitflow-analyzer"
+            "alb.ingress.kubernetes.io/group.order"  = "10"
+          }
+          path     = "/dashboard"
+          pathType = "Prefix"
+          # No hosts entry — ALB route matching is path-only.
+          # CloudFront sends requests with the ALB hostname in Host (due to
+          # AllViewerExceptHostHeader policy), not gitflow.space.
+          hosts = []
+        }
+
+        # grafana.ini is Grafana's main config file.
+        # kube-prometheus-stack merges these keys into the config on startup.
+        "grafana.ini" = {
+          server = {
+            # Tell Grafana it lives at /dashboard so all generated links
+            # (OAuth callback, redirect after login, asset URLs) use the right
+            # path. Without this, Grafana generates links without the prefix
+            # and the browser gets 404s from CloudFront.
+            root_url          = "https://gitflow.space/dashboard"
+            serve_from_sub_path = true
+          }
+
+          auth = {
+            # Disable the username/password login form completely.
+            # The only way to log in is via GitHub OAuth.
+            # This means if OAuth ever breaks, you can re-enable it by setting
+            # this back to false and running terraform apply.
+            disable_login_form = true
+          }
+
+          "auth.github" = {
+            enabled       = true
+            client_id     = var.github_oauth_client_id
+            # The secret is never written to this file — it is read from the
+            # GF_AUTH_GITHUB_CLIENT_SECRET env var at runtime.
+            client_secret = "$__env{GF_AUTH_GITHUB_CLIENT_SECRET}"
+            scopes        = "user:email"
+            auth_url      = "https://github.com/login/oauth/authorize"
+            token_url     = "https://github.com/login/oauth/access_token"
+            api_url       = "https://api.github.com/user"
+            # allowed_users is a comma-separated whitelist of GitHub usernames.
+            # Only the listed user(s) can complete the OAuth flow. Everyone else
+            # sees "Login failed" even with a valid GitHub account.
+            allowed_users = var.github_oauth_allowed_user
+            allow_sign_up = false
+            # allow_sign_up=false means new users can't auto-create accounts.
+            # Combined with allowed_users this gives us double protection.
+          }
+        }
 
         # Data sources are provisioned automatically on every Grafana start.
         # Adding them here means no manual setup in the UI after a cluster rebuild.
@@ -194,7 +280,9 @@ resource "helm_release" "kube_prometheus_stack" {
     })
   ]
 
-  depends_on = [kubernetes_namespace.monitoring]
+  depends_on = [kubernetes_namespace.monitoring, kubernetes_secret.grafana_github_oauth]
+  # Wait for the OAuth secret to exist before Helm deploys Grafana — the pod
+  # will fail to start if it tries to read an envFromSecret that doesn't exist.
 }
 
 # ── Loki ─────────────────────────────────────────────────────────────────────

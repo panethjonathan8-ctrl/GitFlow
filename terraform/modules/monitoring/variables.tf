@@ -70,3 +70,19 @@ variable "alloy_chart_version" {
   default     = "0.9.2"
   # Alloy replaces Grafana Agent. Check https://github.com/grafana/alloy/releases.
 }
+
+variable "github_oauth_client_id" {
+  description = "GitHub OAuth App client ID — create the app at github.com/settings/developers, callback URL must be https://gitflow.space/dashboard/login/github"
+  type        = string
+}
+
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth App client secret — store in terraform.tfvars only, never commit this value"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_oauth_allowed_user" {
+  description = "GitHub username that is allowed to log into Grafana — only this user can authenticate via OAuth"
+  type        = string
+}
