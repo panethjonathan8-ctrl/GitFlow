@@ -41,6 +41,13 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+  # ACM certificates for CloudFront must live in us-east-1 — AWS hard requirement.
+  # This alias is passed to the frontend_cdn module which creates the cert there.
+}
+
 data "aws_eks_cluster_auth" "main" {
   name = module.eks.cluster_name
   # Gets a short-lived (15 min) auth token using your existing AWS credentials.
@@ -206,6 +213,12 @@ module "frontend_cdn" {
   project      = var.project
   env          = var.env
   alb_dns_name = data.aws_ssm_parameter.alb_dns_name.value
+  domain_name  = "gitflow.space"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 }
 
 module "monitoring" {

@@ -1,4 +1,49 @@
+terraform {
+  required_providers {
+    aws = {
+      source                = "hashicorp/aws"
+      configuration_aliases = [aws.us_east_1]
+      # ACM certificates for CloudFront must be created in us-east-1 regardless
+      # of where the rest of the infrastructure lives. The us_east_1 alias is
+      # passed in from the calling environment.
+    }
+  }
+}
+
 data "aws_caller_identity" "current" {}
+
+# ── ACM Certificate ───────────────────────────────────────────────────────────
+# CloudFront requires the certificate to be in us-east-1 — this is an AWS
+# hard requirement regardless of where your other resources live.
+# The certificate covers both the apex (gitflow.space) and www subdomain.
+
+resource "aws_acm_certificate" "cdn" {
+  provider                  = aws.us_east_1
+  domain_name               = var.domain_name
+  subject_alternative_names = ["www.${var.domain_name}"]
+  validation_method         = "DNS"
+  # DNS validation: ACM gives us CNAME records to add to GoDaddy.
+  # Once added, ACM verifies ownership and issues the certificate automatically.
+
+  lifecycle {
+    create_before_destroy = true
+    # Ensures the new certificate is ready before the old one is removed
+    # when the certificate needs to be replaced (e.g. domain name change).
+  }
+
+  tags = {
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_acm_certificate_validation" "cdn" {
+  provider        = aws.us_east_1
+  certificate_arn = aws_acm_certificate.cdn.arn
+  # Blocks until ACM confirms the certificate is validated.
+  # Add the CNAME records from the acm_validation_records output to GoDaddy
+  # while this apply is running — validation usually completes in 2-5 minutes.
+}
 
 # ── S3 bucket ─────────────────────────────────────────────────────────────────
 # Stores the static frontend files (index.html, etc.).
@@ -95,6 +140,10 @@ resource "aws_cloudfront_distribution" "main" {
   # Cheapest option — covers the likely user base for a dev environment.
   # Change to PriceClass_All for global production coverage.
 
+  aliases = [var.domain_name, "www.${var.domain_name}"]
+  # Tell CloudFront to accept requests for both the apex and www subdomain.
+  # GoDaddy must have CNAME records pointing both to this distribution.
+
   comment = "${var.project}-${var.env} frontend"
 
   # ── Origin: S3 (static files) ────────────────────────────────────────────
@@ -169,9 +218,11 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
-    # Uses the *.cloudfront.net certificate. Replace with acm_certificate_arn
-    # when you add a custom domain.
+    acm_certificate_arn      = aws_acm_certificate_validation.cdn.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+    # sni-only: modern browsers all support SNI — no legacy support needed.
+    # TLSv1.2_2021: disables older TLS versions with known vulnerabilities.
   }
 
   tags = {
