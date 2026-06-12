@@ -123,9 +123,9 @@ jobs:
           TF_VAR_github_username: ${{ vars.THE_USERNAME }}
           TF_VAR_ec2_public_key: ${{ vars.EC2_PUBLIC_KEY }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-          TF_VAR_github_oauth_client_id: ${{ vars.GITHUB_OAUTH_CLIENT_ID }}
-          TF_VAR_github_oauth_client_secret: ${{ secrets.GITHUB_OAUTH_CLIENT_SECRET }}
-          TF_VAR_github_oauth_allowed_user: ${{ vars.GITHUB_OAUTH_ALLOWED_USER }}
+          TF_VAR_github_oauth_client_id: ${{ vars.GH_OAUTH_CLIENT_ID }}
+          TF_VAR_github_oauth_client_secret: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          TF_VAR_github_oauth_allowed_user: ${{ vars.GH_OAUTH_ALLOWED_USER }}
           # TF_VAR_ prefix is how you pass Terraform variables from
           # environment variables. This keeps the values out of your
           # tfvars files in CI while still being available to Terraform.
