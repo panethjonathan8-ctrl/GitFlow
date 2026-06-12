@@ -24,13 +24,15 @@ analyzer:
   port: 5001
   resources:
     requests:
-      cpu: 100m
+      cpu: 250m
       memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
     # analyzer clones full repos and walks directory trees — it is CPU and
     # memory heavy compared to the other two services.
+    # CPU request is 250m so HPA triggers at a realistic load point (175m actual).
+    # 1Gi memory limit protects against OOMKill on large repos.
   env:
     PROJECT_NAME: gitflow-analyzer
     ENVIRONMENT: dev
