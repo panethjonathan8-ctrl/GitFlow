@@ -179,7 +179,7 @@ resource "helm_release" "kube_prometheus_stack" {
             # (OAuth callback, redirect after login, asset URLs) use the right
             # path. Without this, Grafana generates links without the prefix
             # and the browser gets 404s from CloudFront.
-            root_url          = "https://gitflow.space/dashboard"
+            root_url          = "https://www.gitflow.space/dashboard"
             serve_from_sub_path = true
           }
 
