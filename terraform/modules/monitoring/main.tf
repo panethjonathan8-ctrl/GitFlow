@@ -200,7 +200,11 @@ resource "helm_release" "kube_prometheus_stack" {
             # The secret is never written to this file — it is read from the
             # GF_AUTH_GITHUB_CLIENT_SECRET env var at runtime.
             client_secret = "$__env{GF_AUTH_GITHUB_CLIENT_SECRET}"
-            scopes        = "user:email"
+            scopes        = "user:email,read:org"
+            # read:org is required so GitHub returns an empty teams list
+            # instead of 404 for personal accounts. Without it Grafana's
+            # teams fetch fails and the login is rejected before allowed_users
+            # is even checked.
             auth_url      = "https://github.com/login/oauth/authorize"
             token_url     = "https://github.com/login/oauth/access_token"
             api_url       = "https://api.github.com/user"
