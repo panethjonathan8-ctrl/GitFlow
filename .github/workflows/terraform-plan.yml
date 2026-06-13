@@ -106,12 +106,12 @@ jobs:
         working-directory: terraform/environments/dev
         run: |
           if [ "${{ steps.cluster_check.outputs.status }}" = "ACTIVE" ]; then
-            terraform plan -no-color -out=tfplan
+            terraform plan -no-color -out=tfplan -lock-timeout=120s
           else
             # Cluster is down — plan only the AWS-layer modules.
             # module.monitoring and module.argocd use Helm/Kubernetes providers
             # and will hang if the cluster API is unreachable.
-            terraform plan -no-color -out=tfplan \
+            terraform plan -no-color -out=tfplan -lock-timeout=120s \
               -target=module.vpc \
               -target=module.iam \
               -target=module.ecr \
