@@ -186,6 +186,13 @@ resource "helm_release" "kube_prometheus_stack" {
             # requests — the session cookie never gets sent back and every
             # API call arrives unauthenticated (userId=0 → No data).
             domain = "www.gitflow.space"
+            # Grafana runs HTTP internally (TLS terminates at CloudFront).
+            # Without this, Grafana ignores X-Forwarded-Proto: https from the
+            # ALB and treats every request as HTTP. That causes CSRF/token
+            # rotation to fail because the session cookie has Secure flag but
+            # Grafana sees the request as plain HTTP — mismatch → token
+            # immediately marked inactive → userId=0 on every panel query.
+            use_proxy_headers = true
           }
 
           security = {
@@ -194,7 +201,10 @@ resource "helm_release" "kube_prometheus_stack" {
             # requests from https://www.gitflow.space fail with "origin not
             # allowed" and all dashboard panels show no data.
             allowed_origins = "https://www.gitflow.space"
-            cookie_secure   = true
+            # cookie_secure removed: Grafana runs HTTP behind the ALB. Forcing
+            # Secure cookies at the application layer while the ALB→Pod leg is
+            # HTTP confuses Grafana's token rotation. CloudFront enforces HTTPS
+            # for all users, so there is no practical security loss here.
           }
 
           live = {
