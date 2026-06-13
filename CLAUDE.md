@@ -125,6 +125,7 @@ git check-ignore -v terraform/environments/dev/terraform.tfvars  # must show a r
 - `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
 
 ### Correct commit workflow
+always go to a new branch on fixing a problem /adding a feature
 ```bash
 # 1. Show what changed
 git status

@@ -158,13 +158,13 @@ resource "helm_release" "kube_prometheus_stack" {
         # gitflow-analyzer rules (order 20), preventing /dashboard requests
         # from accidentally matching the app's catch-all routes.
         ingress = {
-          enabled           = true
-          ingressClassName  = "alb"
+          enabled          = true
+          ingressClassName = "alb"
           annotations = {
-            "alb.ingress.kubernetes.io/scheme"       = "internet-facing"
-            "alb.ingress.kubernetes.io/target-type"  = "ip"
-            "alb.ingress.kubernetes.io/group.name"   = "gitflow-analyzer"
-            "alb.ingress.kubernetes.io/group.order"  = "10"
+            "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
+            "alb.ingress.kubernetes.io/target-type" = "ip"
+            "alb.ingress.kubernetes.io/group.name"  = "gitflow-analyzer"
+            "alb.ingress.kubernetes.io/group.order" = "10"
           }
           path     = "/dashboard"
           pathType = "Prefix"
@@ -182,8 +182,23 @@ resource "helm_release" "kube_prometheus_stack" {
             # (OAuth callback, redirect after login, asset URLs) use the right
             # path. Without this, Grafana generates links without the prefix
             # and the browser gets 404s from CloudFront.
-            root_url          = "https://www.gitflow.space/dashboard"
+            root_url            = "https://www.gitflow.space/dashboard"
             serve_from_sub_path = true
+          }
+
+          security = {
+            # Grafana 11 validates the Origin header on every API call and
+            # WebSocket connection (CSRF protection). Without this, browser
+            # requests from https://www.gitflow.space fail with "origin not
+            # allowed" and all dashboard panels show no data.
+            allowed_origins = "https://www.gitflow.space"
+            cookie_secure   = true
+          }
+
+          live = {
+            # Grafana Live uses WebSockets for real-time panel streaming.
+            # The same origin check applies — set the same value as security.allowed_origins.
+            allowed_origins = "https://www.gitflow.space"
           }
 
           auth = {
@@ -195,8 +210,8 @@ resource "helm_release" "kube_prometheus_stack" {
           }
 
           "auth.github" = {
-            enabled       = true
-            client_id     = var.github_oauth_client_id
+            enabled   = true
+            client_id = var.github_oauth_client_id
             # The secret is never written to this file — it is read from the
             # GF_AUTH_GITHUB_CLIENT_SECRET env var at runtime.
             client_secret = "$__env{GF_AUTH_GITHUB_CLIENT_SECRET}"
@@ -205,18 +220,18 @@ resource "helm_release" "kube_prometheus_stack" {
             # instead of 404 for personal accounts. Without it Grafana's
             # teams fetch fails and the login is rejected before allowed_users
             # is even checked.
-            auth_url      = "https://github.com/login/oauth/authorize"
-            token_url     = "https://github.com/login/oauth/access_token"
-            api_url       = "https://api.github.com/user"
+            auth_url  = "https://github.com/login/oauth/authorize"
+            token_url = "https://github.com/login/oauth/access_token"
+            api_url   = "https://api.github.com/user"
             # allowed_users is a comma-separated whitelist of GitHub usernames.
             # Only the listed user(s) can complete the OAuth flow. Everyone else
             # sees "Login failed" even with a valid GitHub account.
-            allowed_users        = var.github_oauth_allowed_user
-            allow_sign_up        = true
+            allowed_users = var.github_oauth_allowed_user
+            allow_sign_up = true
             # allow_sign_up=true lets allowed users create their Grafana account
             # on first login. Security is enforced by allowed_users above —
             # only panethjonathan8-ctrl can get through GitHub OAuth.
-            skip_org_role_sync   = true
+            skip_org_role_sync = true
             # skip_org_role_sync: Grafana normally fetches GitHub team memberships
             # to map org roles → Grafana roles. That call requires read:org scope.
             # Since we only use allowed_users (not allowed_organizations or team_ids),
@@ -228,9 +243,9 @@ resource "helm_release" "kube_prometheus_stack" {
         # Adding them here means no manual setup in the UI after a cluster rebuild.
         additionalDataSources = [
           {
-            name      = "Loki"
-            type      = "loki"
-            uid       = "loki"
+            name = "Loki"
+            type = "loki"
+            uid  = "loki"
             # Explicit UID so the Tempo trace-to-logs link always resolves
             # correctly, even after a cluster rebuild.
             url       = "http://loki.monitoring.svc.cluster.local:3100"
@@ -249,7 +264,7 @@ resource "helm_release" "kube_prometheus_stack" {
               # Click a trace span in Tempo and Grafana jumps straight to
               # the matching log lines in Loki for that trace ID.
               tracesToLogsV2 = {
-                datasourceUid  = "loki"
+                datasourceUid   = "loki"
                 filterByTraceID = true
               }
               # Pulls service graph metrics from Prometheus once OTel
@@ -406,9 +421,9 @@ resource "helm_release" "tempo" {
       }
 
       persistence = {
-        enabled           = true
-        size              = var.tempo_storage_size
-        storageClassName  = "gp2"
+        enabled          = true
+        size             = var.tempo_storage_size
+        storageClassName = "gp2"
       }
 
       resources = {
