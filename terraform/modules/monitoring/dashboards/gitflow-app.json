@@ -391,6 +391,7 @@
         "datasource": { "type": "prometheus", "uid": "prometheus" },
         "definition": "label_values(flask_http_request_total{namespace=\"gitflow-analyzer\"}, service)",
         "includeAll": true,
+        "allValue": ".*",
         "label": "Service",
         "multi": true,
         "name": "service",
