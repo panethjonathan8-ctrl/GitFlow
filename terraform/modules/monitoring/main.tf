@@ -143,8 +143,11 @@ resource "helm_release" "kube_prometheus_stack" {
         envFromSecret = "grafana-github-oauth"
 
         resources = {
-          requests = { cpu = "100m", memory = "128Mi" }
-          limits   = { cpu = "200m", memory = "256Mi" }
+          requests = { cpu = "100m", memory = "192Mi" }
+          limits   = { cpu = "200m", memory = "512Mi" }
+          # 512Mi limit: Grafana with Prometheus + Loki + Tempo data sources and
+          # custom dashboards sits at ~240Mi at rest. 512Mi gives safe headroom
+          # for dashboard rendering spikes without risking OOMKill.
         }
 
         persistence = { enabled = false }
