@@ -212,7 +212,10 @@ resource "helm_release" "kube_prometheus_stack" {
             # Only the listed user(s) can complete the OAuth flow. Everyone else
             # sees "Login failed" even with a valid GitHub account.
             allowed_users        = var.github_oauth_allowed_user
-            allow_sign_up        = false
+            allow_sign_up        = true
+            # allow_sign_up=true lets allowed users create their Grafana account
+            # on first login. Security is enforced by allowed_users above —
+            # only panethjonathan8-ctrl can get through GitHub OAuth.
             skip_org_role_sync   = true
             # skip_org_role_sync: Grafana normally fetches GitHub team memberships
             # to map org roles → Grafana roles. That call requires read:org scope.
