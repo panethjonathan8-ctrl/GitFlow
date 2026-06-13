@@ -324,6 +324,37 @@ resource "aws_iam_role_policy" "frontend_cdn" {
   })
 }
 
+# ── Policy: ACM certificate management ───────────────────────────────────────
+# Required for the frontend_cdn module which creates an ACM certificate in
+# us-east-1 for CloudFront. Without these, terraform plan fails with
+# AccessDeniedException when it tries to read the certificate state.
+resource "aws_iam_role_policy" "acm" {
+  name = "acm-certificate"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ACMManage"
+        Effect = "Allow"
+        Action = [
+          "acm:RequestCertificate",
+          "acm:DescribeCertificate",
+          "acm:ListCertificates",
+          "acm:DeleteCertificate",
+          "acm:GetCertificate",
+          "acm:ListTagsForCertificate",
+          "acm:AddTagsToCertificate"
+        ]
+        Resource = "*"
+        # ACM does not support resource-level scoping for most actions —
+        # AWS requires Resource: * for certificate operations.
+      }
+    ]
+  })
+}
+
 # ── Policy: SSM for EC2 remote commands ───────────────────────────────────────
 resource "aws_iam_role_policy" "ssm" {
   name = "ssm-ec2-commands"
