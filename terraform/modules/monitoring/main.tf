@@ -178,12 +178,14 @@ resource "helm_release" "kube_prometheus_stack" {
         # kube-prometheus-stack merges these keys into the config on startup.
         "grafana.ini" = {
           server = {
-            # Tell Grafana it lives at /dashboard so all generated links
-            # (OAuth callback, redirect after login, asset URLs) use the right
-            # path. Without this, Grafana generates links without the prefix
-            # and the browser gets 404s from CloudFront.
             root_url            = "https://www.gitflow.space/dashboard"
             serve_from_sub_path = true
+            # domain must match the public hostname. Grafana puts this value
+            # in the Set-Cookie Domain attribute. Without it the default is
+            # "localhost", which the browser rejects for www.gitflow.space
+            # requests — the session cookie never gets sent back and every
+            # API call arrives unauthenticated (userId=0 → No data).
+            domain = "www.gitflow.space"
           }
 
           security = {
