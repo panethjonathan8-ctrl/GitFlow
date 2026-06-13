@@ -152,5 +152,10 @@ ingress:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: gitflow-analyzer
+    alb.ingress.kubernetes.io/group.order: "20"
+    # group.name joins this Ingress into a shared ALB with the Grafana Ingress.
+    # group.order 20 means /api/* rules are evaluated after Grafana's /dashboard
+    # rules (order 10) — lower number = higher priority.
   # Disabled by default — enable after the AWS Load Balancer Controller is
   # installed in the cluster (that is Week 4 work).

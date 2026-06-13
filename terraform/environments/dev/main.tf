@@ -178,11 +178,17 @@ module "aws_lb_controller" {
 data "aws_lb" "app" {
   tags = {
     "elbv2.k8s.aws/cluster" = "${var.project}-${var.env}"
-    "ingress.k8s.aws/stack" = "gitflow-analyzer/gitflow-analyzer"
+    "ingress.k8s.aws/stack" = "gitflow-analyzer"
   }
   # The AWS Load Balancer Controller tags every ALB it creates with these two
   # keys so we can find it by tag instead of by name (which changes on every
   # cluster recreation).
+  #
+  # The stack tag changed from "gitflow-analyzer/gitflow-analyzer" to
+  # "gitflow-analyzer" when we added group.name to the Ingress. For a regular
+  # Ingress the tag is "<namespace>/<name>"; for an IngressGroup it is just the
+  # group name. Both Ingress resources (gitflow-analyzer + Grafana) now use
+  # group.name=gitflow-analyzer, so the LBC creates one shared ALB.
   depends_on = [module.aws_lb_controller, module.argocd]
   # Wait for the LB Controller and ArgoCD to be installed — the ALB is created
   # when ArgoCD syncs the Ingress resource, not by Terraform directly.
@@ -224,9 +230,12 @@ module "frontend_cdn" {
 module "monitoring" {
   source = "../../modules/monitoring"
 
-  project                = var.project
-  env                    = var.env
-  grafana_admin_password = var.grafana_admin_password
+  project                    = var.project
+  env                        = var.env
+  grafana_admin_password     = var.grafana_admin_password
+  github_oauth_client_id     = var.github_oauth_client_id
+  github_oauth_client_secret = var.github_oauth_client_secret
+  github_oauth_allowed_user  = var.github_oauth_allowed_user
 
   depends_on = [module.eks, module.argocd]
   # Requires a running cluster with the Kubernetes provider available.

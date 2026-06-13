@@ -48,3 +48,19 @@ variable "grafana_admin_password" {
   type        = string
   sensitive   = true
 }
+
+variable "github_oauth_client_id" {
+  description = "GitHub OAuth App client ID for Grafana login"
+  type        = string
+}
+
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth App client secret — store in terraform.tfvars only, never commit"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_oauth_allowed_user" {
+  description = "GitHub username allowed to log into Grafana"
+  type        = string
+}
