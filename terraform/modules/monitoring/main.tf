@@ -204,10 +204,13 @@ resource "helm_release" "kube_prometheus_stack" {
             # allowed_users is a comma-separated whitelist of GitHub usernames.
             # Only the listed user(s) can complete the OAuth flow. Everyone else
             # sees "Login failed" even with a valid GitHub account.
-            allowed_users = var.github_oauth_allowed_user
-            allow_sign_up = false
-            # allow_sign_up=false means new users can't auto-create accounts.
-            # Combined with allowed_users this gives us double protection.
+            allowed_users        = var.github_oauth_allowed_user
+            allow_sign_up        = false
+            skip_org_role_sync   = true
+            # skip_org_role_sync: Grafana normally fetches GitHub team memberships
+            # to map org roles → Grafana roles. That call requires read:org scope.
+            # Since we only use allowed_users (not allowed_organizations or team_ids),
+            # we don't need org syncing — disabling it avoids the 404 from GitHub.
           }
         }
 
