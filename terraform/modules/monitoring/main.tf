@@ -166,51 +166,33 @@ resource "helm_release" "kube_prometheus_stack" {
             "alb.ingress.kubernetes.io/group.name"  = "gitflow-analyzer"
             "alb.ingress.kubernetes.io/group.order" = "10"
           }
-          path     = "/dashboard"
+          path     = "/"
           pathType = "Prefix"
-          # No hosts entry — ALB route matching is path-only.
-          # CloudFront sends requests with the ALB hostname in Host (due to
-          # AllViewerExceptHostHeader policy), not gitflow.space.
-          hosts = []
+          # Host-based routing: the Grafana CloudFront distribution uses the
+          # AllViewer origin request policy which forwards the original Host
+          # header (grafana.gitflow.space) to the ALB. The ALB uses this host
+          # to match this ingress rule and route only to Grafana.
+          hosts = [var.grafana_hostname]
         }
 
         # grafana.ini is Grafana's main config file.
         # kube-prometheus-stack merges these keys into the config on startup.
         "grafana.ini" = {
           server = {
-            root_url            = "https://www.gitflow.space/dashboard"
-            serve_from_sub_path = true
-            # domain must match the public hostname. Grafana puts this value
-            # in the Set-Cookie Domain attribute. Without it the default is
-            # "localhost", which the browser rejects for www.gitflow.space
-            # requests — the session cookie never gets sent back and every
-            # API call arrives unauthenticated (userId=0 → No data).
-            domain = "www.gitflow.space"
-            # Grafana runs HTTP internally (TLS terminates at CloudFront).
-            # Without this, Grafana ignores X-Forwarded-Proto: https from the
-            # ALB and treats every request as HTTP. That causes CSRF/token
-            # rotation to fail because the session cookie has Secure flag but
-            # Grafana sees the request as plain HTTP — mismatch → token
-            # immediately marked inactive → userId=0 on every panel query.
+            # Grafana now lives at its own subdomain — no subpath needed.
+            # serve_from_sub_path was removed; path-based routing caused
+            # WebSocket 403s and JS API call routing ambiguity.
+            root_url          = "https://${var.grafana_hostname}"
+            domain            = var.grafana_hostname
             use_proxy_headers = true
           }
 
           security = {
-            # Grafana 11 validates the Origin header on every API call and
-            # WebSocket connection (CSRF protection). Without this, browser
-            # requests from https://www.gitflow.space fail with "origin not
-            # allowed" and all dashboard panels show no data.
-            allowed_origins = "https://www.gitflow.space"
-            # cookie_secure removed: Grafana runs HTTP behind the ALB. Forcing
-            # Secure cookies at the application layer while the ALB→Pod leg is
-            # HTTP confuses Grafana's token rotation. CloudFront enforces HTTPS
-            # for all users, so there is no practical security loss here.
+            allowed_origins = "https://${var.grafana_hostname}"
           }
 
           live = {
-            # Grafana Live uses WebSockets for real-time panel streaming.
-            # The same origin check applies — set the same value as security.allowed_origins.
-            allowed_origins = "https://www.gitflow.space"
+            allowed_origins = "https://${var.grafana_hostname}"
           }
 
           auth = {
@@ -222,32 +204,19 @@ resource "helm_release" "kube_prometheus_stack" {
           }
 
           "auth.github" = {
-            enabled   = true
-            client_id = var.github_oauth_client_id
-            # The secret is never written to this file — it is read from the
-            # GF_AUTH_GITHUB_CLIENT_SECRET env var at runtime.
+            enabled       = true
+            client_id     = var.github_oauth_client_id
             client_secret = "$__env{GF_AUTH_GITHUB_CLIENT_SECRET}"
             scopes        = "user:email,read:org"
-            # read:org is required so GitHub returns an empty teams list
-            # instead of 404 for personal accounts. Without it Grafana's
-            # teams fetch fails and the login is rejected before allowed_users
-            # is even checked.
-            auth_url  = "https://github.com/login/oauth/authorize"
-            token_url = "https://github.com/login/oauth/access_token"
-            api_url   = "https://api.github.com/user"
-            # allowed_users is a comma-separated whitelist of GitHub usernames.
-            # Only the listed user(s) can complete the OAuth flow. Everyone else
-            # sees "Login failed" even with a valid GitHub account.
-            allowed_users = var.github_oauth_allowed_user
-            allow_sign_up = true
-            # allow_sign_up=true lets allowed users create their Grafana account
-            # on first login. Security is enforced by allowed_users above —
-            # only panethjonathan8-ctrl can get through GitHub OAuth.
+            # read:org: GitHub returns 404 on the teams endpoint for personal
+            # accounts without it; Grafana aborts the login before checking
+            # allowed_users.
+            auth_url           = "https://github.com/login/oauth/authorize"
+            token_url          = "https://github.com/login/oauth/access_token"
+            api_url            = "https://api.github.com/user"
+            allowed_users      = var.github_oauth_allowed_user
+            allow_sign_up      = true
             skip_org_role_sync = true
-            # skip_org_role_sync: Grafana normally fetches GitHub team memberships
-            # to map org roles → Grafana roles. That call requires read:org scope.
-            # Since we only use allowed_users (not allowed_organizations or team_ids),
-            # we don't need org syncing — disabling it avoids the 404 from GitHub.
           }
         }
 
