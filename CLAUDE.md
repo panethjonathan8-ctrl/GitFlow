@@ -281,6 +281,38 @@ Example:
 
 ---
 
+## New branch explanation
+
+Every time we start work on a new branch, before writing any code, give a
+plain-language explanation of everything the branch will touch. Structure it
+as follows:
+
+1. **What we are building** — one paragraph describing the goal in plain English,
+   no jargon.
+
+2. **Why we are doing it this way** — explain the reasoning behind the approach
+   and what alternatives were ruled out and why.
+
+3. **Every layer we are changing** — for each file or system being touched,
+   explain what that layer does, why it exists, and how it connects to the
+   layer above and below it. Treat each layer as if the reader has never seen
+   it before.
+
+4. **The full request flow** — after explaining all the layers, draw an ASCII
+   diagram showing the path a request takes from the user's browser all the
+   way through to the data and back. Every hop must be labelled with the
+   protocol and the reason that hop exists.
+
+5. **What could go wrong** — list the failure modes we might hit and what the
+   symptom would look like in each case.
+
+Write this explanation in plain English aimed at someone learning DevOps for
+the first time. Do not assume prior knowledge of any AWS service, Kubernetes
+concept, or networking term — define each one the first time you use it.
+This explanation must come BEFORE any code is written, not after.
+
+---
+
 ## Preferred tools
 
 | Task | Tool |
