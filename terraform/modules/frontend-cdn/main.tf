@@ -171,30 +171,9 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  # ── Behaviour 1: /dashboard* → ALB (Grafana) ─────────────────────────────
-  # Must be listed BEFORE /api/* so CloudFront evaluates it first.
-  # CloudFront checks ordered behaviors in array order and stops at the first
-  # match — if /api/* came first, a request to /dashboard/login/github would
-  # never reach Grafana.
-  ordered_cache_behavior {
-    path_pattern           = "/dashboard*"
-    target_origin_id       = "alb-result-api"
-    viewer_protocol_policy = "redirect-to-https"
-
-    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods  = ["GET", "HEAD"]
-
-    # CachingDisabled — Grafana responses (login redirects, API calls, OAuth
-    # flows) must never be served from cache. Caching a redirect mid-login
-    # breaks the OAuth flow permanently for all subsequent visitors.
-    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    # AllViewerExceptHostHeader — forward cookies and headers so the Grafana
-    # session cookie works. Host is excluded so CloudFront replaces it with
-    # the ALB hostname (required for ALB routing).
-    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
-  }
-
-  # ── Behaviour 2: /api/* → ALB ─────────────────────────────────────────────
+  # ── Behaviour: /api/* → ALB ───────────────────────────────────────────────
+  # Grafana has moved to its own distribution (grafana.gitflow.space) so the
+  # /dashboard* behaviour is no longer needed here.
   ordered_cache_behavior {
     path_pattern           = "/api/*"
     target_origin_id       = "alb-result-api"

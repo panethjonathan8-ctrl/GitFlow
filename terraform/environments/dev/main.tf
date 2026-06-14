@@ -236,9 +236,13 @@ module "monitoring" {
   github_oauth_client_id     = var.github_oauth_client_id
   github_oauth_client_secret = var.github_oauth_client_secret
   github_oauth_allowed_user  = var.github_oauth_allowed_user
+  alb_dns_name               = data.aws_ssm_parameter.alb_dns_name.value
+  # grafana_hostname uses module default (grafana.gitflow.space)
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 
   depends_on = [module.eks, module.argocd]
-  # Requires a running cluster with the Kubernetes provider available.
-  # Depends on argocd to ensure the cluster is fully bootstrapped before
-  # we add more workloads.
 }

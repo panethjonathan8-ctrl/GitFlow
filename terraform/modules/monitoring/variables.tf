@@ -72,7 +72,7 @@ variable "alloy_chart_version" {
 }
 
 variable "github_oauth_client_id" {
-  description = "GitHub OAuth App client ID — create the app at github.com/settings/developers, callback URL must be https://gitflow.space/dashboard/login/github"
+  description = "GitHub OAuth App client ID — create the app at github.com/settings/developers, callback URL must be https://grafana.gitflow.space/login/github"
   type        = string
 }
 
@@ -84,5 +84,16 @@ variable "github_oauth_client_secret" {
 
 variable "github_oauth_allowed_user" {
   description = "GitHub username that is allowed to log into Grafana — only this user can authenticate via OAuth"
+  type        = string
+}
+
+variable "grafana_hostname" {
+  description = "Public hostname for Grafana — must match the CloudFront alias and GoDaddy CNAME record"
+  type        = string
+  default     = "grafana.gitflow.space"
+}
+
+variable "alb_dns_name" {
+  description = "DNS name of the shared ALB — used as the CloudFront origin for the Grafana distribution"
   type        = string
 }
