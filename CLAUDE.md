@@ -76,8 +76,9 @@ GitFlow Analyzer — users submit a GitHub repo URL and get back detected langua
 
 ### Current state
 - Week 1-2: Complete — Terraform foundation, Flask monolith, Docker, EC2, CI/CD
-- Week 3 Days 1-4: Complete — staging environment, rollback, microservices split, Helm charts
-- Week 3 Day 5+: In progress — EKS preparation
+- Week 3: Complete — staging (EC2), rollback, microservices split, Helm, EKS, ArgoCD
+- Week 5: Complete — Prometheus, Grafana, Loki, Tempo, Alloy, HPA, PDB, NetworkPolicy
+- Next: Multi-environment promotion pipeline (dev → staging → production namespaces on EKS)
 
 ### AWS account
 - Account ID: 153772056450
@@ -85,14 +86,18 @@ GitFlow Analyzer — users submit a GitHub repo URL and get back detected langua
 - IAM user for local work: gitflow-analyzer-dev
 
 ### Live infrastructure — do not touch without asking
-- Dev EC2 instance running the monolith at 108.131.187.89:5000
-- Staging EC2 instance running the monolith
+- EKS cluster spun down nightly to save cost — spin up with `terraform apply` in `terraform/environments/dev`
+- Frontend: https://www.gitflow.space (S3 + CloudFront)
+- Grafana: https://grafana.gitflow.space (dedicated CloudFront → ALB → Grafana pod)
+- No EC2 instances running — staging EC2 from Week 3 has been decommissioned
 - All resources tagged with Project=gitflow-analyzer
 
 ### GitHub repo
 - https://github.com/panethjonathan8-ctrl/GitFlow
 - Main branch is protected — always work on feature branches
 - CI runs on every push to main
+- Squash merge only — the PR title becomes the single commit message on main
+- Branches are deleted automatically after merge
 
 ---
 
@@ -124,30 +129,76 @@ git check-ignore -v terraform/environments/dev/terraform.tfvars  # must show a r
 - `venv/`, `__pycache__/`, `*.pyc`
 - `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
 
+### Issue-first rule — never break this
+Every bug fix and every new feature MUST start with a GitHub Issue before any branch is created.
+
+Correct order:
+1. Open a GitHub Issue using the template at `.github/ISSUE_TEMPLATE/issue.md`
+2. Note the issue number (e.g. #54)
+3. Create a branch named `type/issue-number-short-description`
+4. Do the work
+5. Open a PR with `Closes #54` in the body — GitHub closes the issue automatically on merge
+
+Never create a branch without a matching issue. Never open a PR that does not close an issue.
+The only exceptions are one-off chores with no clear problem to track (e.g. fixing a typo in CLAUDE.md).
+
+### Branch naming convention
+```
+type/issue-number-short-description
+```
+| Type | When to use |
+|---|---|
+| `feat` | New feature or capability |
+| `fix` | Bug fix |
+| `chore` | Housekeeping, config, tooling — no production behaviour change |
+| `docs` | Documentation only |
+| `refactor` | Code restructure with no behaviour change |
+| `infra` | Terraform or AWS infrastructure change |
+
+Examples:
+- `feat/54-multi-env-promotion`
+- `fix/61-analyze-500-error`
+- `chore/53-github-templates`
+- `infra/58-add-staging-irsa`
+
+### PR rules
+- Every PR must close a GitHub Issue (`Closes #N` in the PR body)
+- The PR title becomes the squash commit message on main — write it carefully
+- All review conversations must be resolved before merge
+- CI must pass before merge (when it runs — CI only triggers on `services/**` changes)
+- Use the PR template at `.github/pull_request_template.md` — fill in every section
+
 ### Correct commit workflow
-always go to a new branch on fixing a problem /adding a feature
 ```bash
-# 1. Show what changed
+# 0. Open a GitHub Issue first — get the issue number
+# 1. Create branch
+git checkout -b feat/54-short-description
+
+# 2. Show what changed
 git status
 git diff
 
-# 2. Stage specific files — never use git add . blindly
+# 3. Stage specific files — never use git add . blindly
 git add terraform/modules/eks/main.tf
 git add terraform/modules/eks/variables.tf
 git add terraform/modules/eks/outputs.tf
 
-# 3. Verify staged files
+# 4. Verify staged files
 git status
 git diff --staged
 
-# 4. Check for secrets in staged files
+# 5. Check for secrets in staged files
 git diff --staged | grep -iE "AKIA|secret|password|token|private"
 
-# 5. Ask user to confirm before committing
+# 6. Ask user to confirm before committing
 # "I am about to commit: [list files]. Commit message: [message]. Shall I proceed?"
 
-# 6. Only commit after explicit user confirmation
+# 7. Only commit after explicit user confirmation
 git commit -m "feat: add EKS module with managed node group"
+
+# 8. Push and open PR — ask user before pushing
+git push -u origin feat/54-short-description
+# Open PR with title matching the commit message and "Closes #54" in the body
 ```
 
 ---
@@ -338,6 +389,11 @@ This explanation must come BEFORE any code is written, not after.
 - Do not use `terraform workspace` — use separate environment folders instead
 - Do not use `count` on named resources — use `for_each`
 - Do not write inline Python or complex logic in GitHub Actions YAML — use scripts
+- Do not push directly to main — main is branch-protected, always use a PR
+- Do not create a branch without a GitHub Issue — issue first, branch second
+- Do not open a PR without `Closes #N` linking it to an issue
+- Do not use `git push --force` under any circumstances — it is blocked on main and forbidden everywhere
+- Do not write a vague PR title — it becomes the permanent squash commit message on main
 
 ---
 
