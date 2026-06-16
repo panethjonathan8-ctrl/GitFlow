@@ -1,5 +1,10 @@
 # Staging-environment overrides.
-# Apply with: helm upgrade --install gitflow-analyzer . -f values.yaml -f values-staging.yaml
+# Apply with: helm upgrade --install gitflow-analyzer-staging . -f values.yaml -f values-staging.yaml
+
+image:
+  tag: "9726da6"
+  # This line is overwritten automatically by the deploy pipeline.
+  # Set to the same initial tag as dev so the chart renders on first apply.
 
 analyzer:
   env:
@@ -9,7 +14,22 @@ graphBuilder:
   env:
     ENVIRONMENT: staging
 
-# serviceAccount.annotations will be populated after the IRSA role is created:
-#   serviceAccount:
-#     annotations:
-#       eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-staging-app-role
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-staging-app-role
+    # Populated after running: terraform apply (in terraform/environments/dev)
+    # The staging IRSA role trusts system:serviceaccount:gitflow-analyzer-staging:gitflow-analyzer
+
+hpa:
+  enabled: true
+
+pdb:
+  enabled: true
+
+networkPolicy:
+  enabled: true
+
+ingress:
+  enabled: false
+  # Staging has no public DNS entry — smoke tests reach it via kubectl port-forward.
+  # Enable and add a host rule here if you want a staging.gitflow.space subdomain.

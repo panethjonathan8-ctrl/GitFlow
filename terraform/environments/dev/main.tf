@@ -97,6 +97,24 @@ module "secrets" {
   source  = "../../modules/secrets"
   project = var.project
   env     = var.env
+  # Creates gitflow-analyzer/dev/github-token in Secrets Manager.
+  # Value is set manually: aws secretsmanager put-secret-value --secret-id ...
+}
+
+module "secrets_staging" {
+  source  = "../../modules/secrets"
+  project = var.project
+  env     = "staging"
+  # Creates gitflow-analyzer/staging/github-token.
+  # After terraform apply, populate with the same GitHub token as dev.
+}
+
+module "secrets_production" {
+  source  = "../../modules/secrets"
+  project = var.project
+  env     = "production"
+  # Creates gitflow-analyzer/production/github-token.
+  # After terraform apply, populate with the same GitHub token as dev.
 }
 
 module "eks" {
@@ -132,11 +150,38 @@ module "argocd" {
 module "irsa" {
   source = "../../modules/irsa"
 
-  project           = var.project
-  env               = var.env
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
-  # namespace and service_account_name use module defaults (gitflow-analyzer)
+  project              = var.project
+  env                  = var.env
+  oidc_provider_arn    = module.eks.oidc_provider_arn
+  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  namespace            = "gitflow-analyzer-dev"
+  # Explicit namespace — the trust policy scopes credentials to pods in THIS
+  # namespace only. Renamed from "gitflow-analyzer" to "gitflow-analyzer-dev"
+  # as part of the multi-env migration (issue #57).
+
+  depends_on = [module.eks]
+}
+
+module "irsa_staging" {
+  source = "../../modules/irsa"
+
+  project              = var.project
+  env                  = "staging"
+  oidc_provider_arn    = module.eks.oidc_provider_arn
+  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  namespace            = "gitflow-analyzer-staging"
+
+  depends_on = [module.eks]
+}
+
+module "irsa_production" {
+  source = "../../modules/irsa"
+
+  project              = var.project
+  env                  = "production"
+  oidc_provider_arn    = module.eks.oidc_provider_arn
+  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
+  namespace            = "gitflow-analyzer-production"
 
   depends_on = [module.eks]
 }

@@ -1,0 +1,36 @@
+# Production-environment overrides.
+# Apply with: helm upgrade --install gitflow-analyzer-production . -f values.yaml -f values-production.yaml
+
+image:
+  tag: "9726da6"
+  # This line is overwritten automatically by the deploy pipeline after
+  # a human approves the production deployment in GitHub Actions.
+
+analyzer:
+  env:
+    ENVIRONMENT: production
+
+graphBuilder:
+  env:
+    ENVIRONMENT: production
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-production-app-role
+    # Populated after running: terraform apply (in terraform/environments/dev)
+    # The production IRSA role trusts system:serviceaccount:gitflow-analyzer-production:gitflow-analyzer
+
+hpa:
+  enabled: true
+
+pdb:
+  enabled: true
+
+networkPolicy:
+  enabled: true
+
+ingress:
+  enabled: false
+  # Production has no separate public DNS entry in this project.
+  # www.gitflow.space currently points to the dev namespace via the shared ALB.
+  # To give production its own URL, add a host rule here and a DNS record.

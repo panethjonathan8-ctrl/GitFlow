@@ -17,8 +17,8 @@ graphBuilder:
 serviceAccount:
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::153772056450:role/gitflow-analyzer-dev-app-role
-    # This annotation is what activates IRSA for the app pods.
-    # EKS sees it and injects temporary AWS credentials scoped to this role.
+    # IRSA: EKS injects temporary AWS credentials into pods using this role.
+    # The trust policy is scoped to system:serviceaccount:gitflow-analyzer-dev:gitflow-analyzer.
     # Run `terraform output -module=irsa role_arn` after apply to confirm the ARN.
 
 hpa:

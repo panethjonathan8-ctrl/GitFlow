@@ -8,22 +8,16 @@ def update_image_tag(values_file: str, tag: str) -> None:
     with open(values_file, "r") as f:
         content = f.read()
 
-    if re.search(r"^image:\s*$", content, re.MULTILINE):
-        # Replace the tag line that sits under the existing image: block
-        content = re.sub(
-            r"(^image:\s*\n\s+tag:)\s*\S+",
-            rf'\g<1> "{tag}"',
-            content,
-            flags=re.MULTILINE,
-        )
-    else:
-        # No image: block yet — append one
-        content = content.rstrip("\n") + f'\nimage:\n  tag: "{tag}"\n'
+    updated = re.sub(r'(tag:\s*")[^"]*(")', rf"\1{tag}\2", content)
+
+    if updated == content:
+        print(f"WARNING: no tag field found in {values_file}", file=sys.stderr)
+        sys.exit(1)
 
     with open(values_file, "w") as f:
-        f.write(content)
+        f.write(updated)
 
-    print(f"Updated image.tag to {tag} in {values_file}")
+    print(f"Updated image tag to {tag} in {values_file}")
 
 
 if __name__ == "__main__":
