@@ -63,8 +63,13 @@ resource "null_resource" "argocd_application" {
   triggers = {
     cluster_name = var.cluster_name
     aws_region   = var.aws_region
-    # Re-runs if the application manifest changes
-    manifest_hash = filesha256("${path.root}/../../../k8s/argocd/application.yaml")
+    # Re-runs if any of the three Application manifests change.
+    # sha256(join(...)) combines all three hashes into one trigger value.
+    manifest_hash = sha256(join("", [
+      filesha256("${path.root}/../../../k8s/argocd/application-dev.yaml"),
+      filesha256("${path.root}/../../../k8s/argocd/application-staging.yaml"),
+      filesha256("${path.root}/../../../k8s/argocd/application-production.yaml"),
+    ]))
   }
 
   provisioner "local-exec" {
@@ -73,23 +78,28 @@ resource "null_resource" "argocd_application" {
       echo "Waiting for ArgoCD server to be ready..."
       kubectl wait --for=condition=available deployment/argocd-server \
         --namespace argocd --timeout=180s
-      kubectl apply -f "${path.root}/../../../k8s/argocd/application.yaml"
-      echo "ArgoCD Application registered — sync will begin within ~3 minutes"
+      kubectl apply -f "${path.root}/../../../k8s/argocd/application-dev.yaml"
+      kubectl apply -f "${path.root}/../../../k8s/argocd/application-staging.yaml"
+      kubectl apply -f "${path.root}/../../../k8s/argocd/application-production.yaml"
+      kubectl delete application gitflow-analyzer -n argocd --ignore-not-found=true 2>/dev/null || true
+      echo "ArgoCD Applications registered — syncs will begin within ~3 minutes"
     EOT
   }
 
   # Runs during terraform destroy BEFORE the ArgoCD Helm release is deleted.
-  # Without this, the ArgoCD app controller is gone before the Application
-  # object is cleaned up, leaving its finalizer stuck and the namespace
-  # permanently in Terminating. The || true on each command ensures a missing
-  # cluster or already-deleted Application never blocks the destroy.
+  # Without this the ArgoCD app controller is gone before Application objects
+  # are cleaned up, leaving their finalizers stuck and namespaces permanently
+  # in Terminating. The || true on each command ensures a missing cluster or
+  # already-deleted Application never blocks the destroy.
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
       aws eks update-kubeconfig --name "${self.triggers.cluster_name}" --region "${self.triggers.aws_region}" || true
-      kubectl patch application gitflow-analyzer -n argocd \
-        -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
-      kubectl delete application gitflow-analyzer -n argocd --ignore-not-found=true 2>/dev/null || true
+      for app in gitflow-analyzer-dev gitflow-analyzer-staging gitflow-analyzer-production gitflow-analyzer; do
+        kubectl patch application "$app" -n argocd \
+          -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+        kubectl delete application "$app" -n argocd --ignore-not-found=true 2>/dev/null || true
+      done
       echo "ArgoCD Application finalizers cleared"
     EOT
   }
