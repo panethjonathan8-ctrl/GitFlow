@@ -4,6 +4,8 @@ import requests
 from flask import Flask, request, jsonify
 from prometheus_flask_exporter import PrometheusMetrics
 
+APP_VERSION = "1.0.0"
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s"
