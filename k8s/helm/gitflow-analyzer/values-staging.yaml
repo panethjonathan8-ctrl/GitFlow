@@ -9,10 +9,24 @@ image:
 analyzer:
   env:
     ENVIRONMENT: staging
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 graphBuilder:
   env:
     ENVIRONMENT: staging
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+resultApi:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
 serviceAccount:
   annotations:
