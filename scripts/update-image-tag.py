@@ -8,7 +8,7 @@ def update_image_tag(values_file: str, tag: str) -> None:
     with open(values_file, "r") as f:
         content = f.read()
 
-    updated = re.sub(r'(tag:\s*")[^"]*(")', rf"\1{tag}\2", content)
+    updated = re.sub(r'(tag:\s*")[^"]*(")', rf"\g<1>{tag}\g<2>", content)
 
     if updated == content:
         print(f"WARNING: no tag field found in {values_file}", file=sys.stderr)
