@@ -820,7 +820,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${datasource}"
+          "uid": "prometheus"
         },
         "definition": "label_values(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\"}, namespace)",
         "hide": 0,
