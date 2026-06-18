@@ -1,158 +1,354 @@
 {
-  "description": "Full observability for GitFlow Analyzer — HTTP traffic, latency, errors, resource usage, pod health, and logs",
+  "description": "Full observability for GitFlow Analyzer \u2014 HTTP traffic, latency, errors, resource usage, pod health, and logs",
   "editable": true,
   "graphTooltip": 1,
   "panels": [
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 1, "title": "Overview", "type": "row" },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
-          "unit": "short", "mappings": []
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
         }
       },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
       "id": 2,
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["sum"] } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(increase(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[1h]))",
-        "refId": "A"
-      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[1h]))",
+          "refId": "A"
+        }
+      ],
       "title": "Total Requests (1h)",
       "type": "stat"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null },
-            { "color": "yellow", "value": 0.5 },
-            { "color": "red", "value": 2 }
-          ]},
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
           "unit": "s"
         }
       },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
       "id": 3,
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (le))",
-        "refId": "A"
-      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (le))",
+          "refId": "A"
+        }
+      ],
       "title": "P95 Latency",
       "type": "stat"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null },
-            { "color": "yellow", "value": 0.01 },
-            { "color": "red", "value": 0.05 }
-          ]},
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
           "unit": "percentunit"
         }
       },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
       "id": 4,
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\", status=~\"[45]..\"}[5m])) / sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m]))",
-        "refId": "A"
-      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\", status=~\"[45]..\"}[5m])) / sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m]))",
+          "refId": "A"
+        }
+      ],
       "title": "Error Rate",
       "type": "stat"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "red", "value": null },
-            { "color": "green", "value": 1 }
-          ]},
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
           "unit": "short"
         }
       },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
       "id": 5,
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(kube_pod_status_ready{namespace=~\\"gitflow-analyzer-.*\\", condition=\"true\"})",
-        "refId": "A"
-      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(kube_pod_status_ready{namespace=~\"gitflow-analyzer-.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
       "title": "Running Pods",
       "type": "stat"
     },
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "id": 6, "title": "HTTP Traffic", "type": "row" },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 6,
+      "title": "HTTP Traffic",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "reqps"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
       "id": 7,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (service)",
-        "legendFormat": "{{ service }}",
-        "refId": "A"
-      }],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (service)",
+          "legendFormat": "{{ service }}",
+          "refId": "A"
+        }
+      ],
       "title": "Request Rate",
       "type": "timeseries"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "s"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
       "id": 8,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (service, le))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (service, le))",
           "legendFormat": "p99 {{ service }}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (service, le))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (service, le))",
           "legendFormat": "p95 {{ service }}",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (service, le))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (service, le))",
           "legendFormat": "p50 {{ service }}",
           "refId": "C"
         }
@@ -160,81 +356,168 @@
       "title": "Request Latency (p99 / p95 / p50)",
       "type": "timeseries"
     },
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "id": 9, "title": "Errors & Status Codes", "type": "row" },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 9,
+      "title": "Errors & Status Codes",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "percentunit",
           "min": 0,
           "max": 1
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
       "id": 10,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\", status=~\"[45]..\"}[5m])) by (service) / sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (service)",
-        "legendFormat": "{{ service }}",
-        "refId": "A"
-      }],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\", status=~\"[45]..\"}[5m])) by (service) / sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (service)",
+          "legendFormat": "{{ service }}",
+          "refId": "A"
+        }
+      ],
       "title": "Error Rate (4xx + 5xx) per Service",
       "type": "timeseries"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2, "stacking": { "mode": "normal" } },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
           "unit": "reqps"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
       "id": 11,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(rate(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}[5m])) by (status)",
-        "legendFormat": "HTTP {{ status }}",
-        "refId": "A"
-      }],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}[5m])) by (status)",
+          "legendFormat": "HTTP {{ status }}",
+          "refId": "A"
+        }
+      ],
       "title": "Requests by Status Code",
       "type": "timeseries"
     },
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }, "id": 12, "title": "Resource Usage", "type": "row" },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 12,
+      "title": "Resource Usage",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "short",
           "min": 0
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
       "id": 13,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\\"gitflow-analyzer-.*\\", container=~\"$service\", container!=\"\"}[5m])) by (container)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"gitflow-analyzer-.*\", container=~\"$service\", container!=\"\"}[5m])) by (container)",
           "legendFormat": "{{ container }}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(kube_pod_container_resource_limits{namespace=~\\"gitflow-analyzer-.*\\", container=~\"$service\", resource=\"cpu\"}) by (container)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(kube_pod_container_resource_limits{namespace=~\"gitflow-analyzer-.*\", container=~\"$service\", resource=\"cpu\"}) by (container)",
           "legendFormat": "limit: {{ container }}",
           "refId": "B"
         }
@@ -242,30 +525,52 @@
       "title": "CPU Usage vs Limit (cores)",
       "type": "timeseries"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "bytes",
           "min": 0
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
       "id": 14,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_working_set_bytes{namespace=~\\"gitflow-analyzer-.*\\", container=~\"$service\", container!=\"\"}) by (container)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(container_memory_working_set_bytes{namespace=~\"gitflow-analyzer-.*\", container=~\"$service\", container!=\"\"}) by (container)",
           "legendFormat": "{{ container }}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(kube_pod_container_resource_limits{namespace=~\\"gitflow-analyzer-.*\\", container=~\"$service\", resource=\"memory\"}) by (container)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(kube_pod_container_resource_limits{namespace=~\"gitflow-analyzer-.*\", container=~\"$service\", resource=\"memory\"}) by (container)",
           "legendFormat": "limit: {{ container }}",
           "refId": "B"
         }
@@ -273,83 +578,180 @@
       "title": "Memory Usage vs Limit",
       "type": "timeseries"
     },
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 }, "id": 15, "title": "Pod Health", "type": "row" },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 15,
+      "title": "Pod Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null },
-            { "color": "yellow", "value": 1 },
-            { "color": "red", "value": 5 }
-          ]},
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
           "unit": "short",
-          "mappings": [{ "options": { "0": { "text": "None" } }, "type": "value" }]
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "None"
+                }
+              },
+              "type": "value"
+            }
+          ]
         },
         "overrides": []
       },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 33 },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 33
+      },
       "id": 16,
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto" },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\\"gitflow-analyzer-.*\\", container=~\"$service\"}[24h])) by (container)",
-        "legendFormat": "{{ container }}",
-        "refId": "A"
-      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"gitflow-analyzer-.*\", container=~\"$service\"}[24h])) by (container)",
+          "legendFormat": "{{ container }}",
+          "refId": "A"
+        }
+      ],
       "title": "Pod Restarts (24h)",
       "type": "stat"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "short",
           "min": 0
         }
       },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 33 },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 33
+      },
       "id": 17,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "expr": "sum(flask_http_request_active{namespace=~\\"gitflow-analyzer-.*\\", service=~\"$service\"}) by (service)",
-        "legendFormat": "{{ service }}",
-        "refId": "A"
-      }],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(flask_http_request_active{namespace=~\"gitflow-analyzer-.*\", service=~\"$service\"}) by (service)",
+          "legendFormat": "{{ service }}",
+          "refId": "A"
+        }
+      ],
       "title": "Active (In-Flight) Requests",
       "type": "timeseries"
     },
-
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2 },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2
+          },
           "unit": "Bps",
           "min": 0
         }
       },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 33 },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 33
+      },
       "id": 18,
-      "options": { "tooltip": { "mode": "multi", "sort": "desc" } },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(container_network_receive_bytes_total{namespace=~\\"gitflow-analyzer-.*\\"}[5m])) by (pod)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(container_network_receive_bytes_total{namespace=~\"gitflow-analyzer-.*\"}[5m])) by (pod)",
           "legendFormat": "rx: {{ pod }}",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\\"gitflow-analyzer-.*\\"}[5m])) by (pod)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\"gitflow-analyzer-.*\"}[5m])) by (pod)",
           "legendFormat": "tx: {{ pod }}",
           "refId": "B"
         }
@@ -357,12 +759,29 @@
       "title": "Network I/O per Pod",
       "type": "timeseries"
     },
-
-    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 }, "id": 19, "title": "Logs", "type": "row" },
-
     {
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 41 },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 19,
+      "title": "Logs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
       "id": 20,
       "options": {
         "dedupStrategy": "none",
@@ -371,32 +790,46 @@
         "sortOrder": "Descending",
         "wrapLogMessage": false
       },
-      "targets": [{
-        "datasource": { "type": "loki", "uid": "loki" },
-        "expr": "{namespace=~\\"gitflow-analyzer-.*\\", app=~\"$service\"}",
-        "refId": "A"
-      }],
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{namespace=~\"gitflow-analyzer-.*\", app=~\"$service\"}",
+          "refId": "A"
+        }
+      ],
       "title": "Application Logs",
       "type": "logs"
     }
-
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "tags": ["gitflow", "application"],
+  "tags": [
+    "gitflow",
+    "application"
+  ],
   "templating": {
     "list": [
       {
-        "current": { "selected": true, "text": "All", "value": "$__all" },
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\"}, service)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\"}, service)",
         "includeAll": true,
         "allValue": ".*",
         "label": "Service",
         "multi": true,
         "name": "service",
         "query": {
-          "query": "label_values(flask_http_request_total{namespace=~\\"gitflow-analyzer-.*\\"}, service)",
+          "query": "label_values(flask_http_request_total{namespace=~\"gitflow-analyzer-.*\"}, service)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -405,8 +838,11 @@
       }
     ]
   },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "timezone": "browser",
-  "title": "GitFlow Analyzer — Application",
+  "title": "GitFlow Analyzer \u2014 Application",
   "uid": "gitflow-app"
 }
