@@ -90,3 +90,44 @@ resource "aws_route_table_association" "public" {
   # The VPC has a default route table but it has no internet route.
   # You must explicitly associate subnets with a route table that has the IGW route.
 }
+
+# ── Private subnets ───────────────────────────────────────────────────────────
+# Private subnets have no route to the internet gateway, so resources placed
+# here (e.g. RDS) cannot be reached from outside the VPC. They can still
+# receive connections from other resources inside the same VPC (e.g. EKS nodes).
+# No NAT gateway is needed because RDS does not initiate outbound internet traffic.
+resource "aws_subnet" "private" {
+  count = length(var.private_subnet_cidrs)
+
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidrs[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  # map_public_ip_on_launch defaults to false — private subnets never get public IPs.
+
+  tags = {
+    Name        = "${var.project}-${var.env}-private-${count.index + 1}"
+    Project     = var.project
+    Environment = var.env
+    Type        = "private"
+  }
+}
+
+# ── Private route table ───────────────────────────────────────────────────────
+# A separate route table with no internet route. Any subnet associated with
+# this table can only route traffic within the VPC (10.0.0.0/16).
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name        = "${var.project}-${var.env}-private-rt"
+    Project     = var.project
+    Environment = var.env
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count = length(aws_subnet.private)
+
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}

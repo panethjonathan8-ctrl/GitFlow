@@ -57,3 +57,13 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID — set as CLOUDFRONT_DISTRIBUTION_ID in GitHub Actions variables"
   value       = module.frontend_cdn.cloudfront_distribution_id
 }
+
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint — copy this into values-dev.yaml and values-production.yaml under resultApi.database.host"
+  value       = module.rds.endpoint
+}
+
+output "rds_password_secret" {
+  description = "Secrets Manager secret name holding the DB password"
+  value       = module.rds.password_secret_name
+}

@@ -27,6 +27,10 @@ resultApi:
     requests:
       cpu: 25m
       memory: 64Mi
+  database:
+    host: ""
+    # Set this to the RDS endpoint after terraform apply:
+    # terraform -chdir=terraform/environments/dev output -raw rds_endpoint
 
 serviceAccount:
   annotations:

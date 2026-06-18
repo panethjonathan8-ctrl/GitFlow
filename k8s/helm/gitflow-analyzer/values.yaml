@@ -89,6 +89,15 @@ resultApi:
     # When result-api calls http://analyzer:5001, CoreDNS resolves "analyzer"
     # to the ClusterIP of the analyzer Service automatically.
 
+  database:
+    host: ""
+    port: "5432"
+    name: "gitflow"
+    user: "gitflow"
+    # host is set per-environment in values-dev.yaml / values-production.yaml.
+    # The password is never stored here — the app fetches it from Secrets Manager
+    # at startup using the same boto3 pattern as the GitHub token.
+
 
 # ── Monitoring ────────────────────────────────────────────────────────────────
 monitoring:

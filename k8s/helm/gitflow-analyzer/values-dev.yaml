@@ -30,6 +30,12 @@ pdb:
 networkPolicy:
   enabled: true
 
+resultApi:
+  database:
+    host: ""
+    # Set this to the RDS endpoint after terraform apply:
+    # terraform -chdir=terraform/environments/dev output -raw rds_endpoint
+
 ingress:
   enabled: false
   # Dev is internal only — accessed via the pipeline smoke test and kubectl port-forward.

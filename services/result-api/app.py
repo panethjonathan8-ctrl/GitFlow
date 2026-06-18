@@ -3,6 +3,9 @@ import logging
 import requests
 from flask import Flask, request, jsonify
 from prometheus_flask_exporter import PrometheusMetrics
+from sqlalchemy.exc import OperationalError
+
+import database
 
 APP_VERSION = "1.0.0"
 
@@ -16,20 +19,22 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app, excluded_paths=["/health"])
 metrics.info("app_info", "Application info", service="result-api")
 
-# Service URLs — configurable via environment variables.
-# In docker-compose these use service names.
-# In Kubernetes these use cluster DNS names.
-ANALYZER_URL    = os.environ.get("ANALYZER_URL", "http://analyzer:5001")
+ANALYZER_URL      = os.environ.get("ANALYZER_URL", "http://analyzer:5001")
 GRAPH_BUILDER_URL = os.environ.get("GRAPH_BUILDER_URL", "http://graph-builder:5002")
+
+# Initialise DB connection at startup. If DB_HOST is not set (local dev without
+# a database) we skip silently so the service still starts.
+_db_engine = None
+if os.environ.get("DB_HOST"):
+    try:
+        _db_engine = database.get_engine()
+        database.init_db(_db_engine)
+    except Exception as exc:
+        logger.warning("Database unavailable — caching disabled: %s", exc)
 
 
 @app.route("/health", methods=["GET"])
 def health():
-    """
-    Health check for this service only.
-    Does not check downstream services — that would make this
-    health check dependent on two other services which adds fragility.
-    """
     return jsonify({"status": "healthy", "service": "result-api"}), 200
 
 
@@ -48,10 +53,6 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    """
-    Main endpoint. Orchestrates the analyzer and graph-builder services.
-    Users send requests here. This service calls the others internally.
-    """
     data = request.get_json()
 
     if not data or "repo_url" not in data:
@@ -65,11 +66,21 @@ def analyze():
     if "github.com" not in repo_url:
         return jsonify({"error": "Only GitHub repos supported"}), 400
 
-    logger.info(f"Orchestrating analysis for: {repo_url}")
+    logger.info("Orchestrating analysis for: %s", repo_url)
+
+    # ── Cache check ───────────────────────────────────────────────────────────
+    if _db_engine:
+        try:
+            cached = database.get_cached_result(_db_engine, repo_url)
+            if cached:
+                cached["cached"] = True
+                return jsonify(cached), 200
+        except OperationalError as exc:
+            logger.warning("Cache read failed, proceeding without cache: %s", exc)
 
     try:
-        # Call analyzer service
-        logger.info(f"Calling analyzer at {ANALYZER_URL}")
+        # ── Analyzer ──────────────────────────────────────────────────────────
+        logger.info("Calling analyzer at %s", ANALYZER_URL)
         analyzer_response = requests.post(
             f"{ANALYZER_URL}/analyze",
             json={"repo_url": repo_url},
@@ -78,8 +89,8 @@ def analyze():
         analyzer_response.raise_for_status()
         analysis = analyzer_response.json()
 
-        # Call graph-builder service
-        logger.info(f"Calling graph-builder at {GRAPH_BUILDER_URL}")
+        # ── Graph builder ─────────────────────────────────────────────────────
+        logger.info("Calling graph-builder at %s", GRAPH_BUILDER_URL)
         graph_response = requests.post(
             f"{GRAPH_BUILDER_URL}/build-graph",
             json={"repo_url": repo_url},
@@ -88,8 +99,7 @@ def analyze():
         graph_response.raise_for_status()
         graph = graph_response.json()
 
-        # Combine and return results
-        return jsonify({
+        result = {
             "repo_url":   repo_url,
             "languages":  analysis.get("languages", {}),
             "frameworks": analysis.get("frameworks", []),
@@ -99,21 +109,31 @@ def analyze():
                 "node_count": graph.get("node_count", 0),
                 "edge_count": graph.get("edge_count", 0)
             },
-            "status": "success"
-        }), 200
+            "status":  "success",
+            "cached":  False,
+        }
 
-    except requests.exceptions.ConnectionError as e:
-        logger.error(f"Service connection error: {str(e)}")
+        # ── Cache store ───────────────────────────────────────────────────────
+        if _db_engine:
+            try:
+                database.store_result(_db_engine, repo_url, result)
+            except OperationalError as exc:
+                logger.warning("Cache write failed: %s", exc)
+
+        return jsonify(result), 200
+
+    except requests.exceptions.ConnectionError as exc:
+        logger.error("Service connection error: %s", exc)
         return jsonify({
             "error": "Could not connect to upstream service",
-            "detail": str(e)
+            "detail": str(exc)
         }), 503
 
     except requests.exceptions.Timeout:
         return jsonify({"error": "Upstream service timed out"}), 504
 
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+    except Exception as exc:
+        logger.error("Unexpected error: %s", exc, exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 

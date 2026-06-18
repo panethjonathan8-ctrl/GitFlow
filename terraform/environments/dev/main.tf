@@ -22,6 +22,10 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 
   backend "s3" {
@@ -270,6 +274,18 @@ module "frontend_cdn" {
     aws           = aws
     aws.us_east_1 = aws.us_east_1
   }
+}
+
+module "rds" {
+  source = "../../modules/rds"
+
+  project                    = var.project
+  env                        = var.env
+  vpc_id                     = module.vpc.vpc_id
+  private_subnet_ids         = module.vpc.private_subnet_ids
+  eks_node_security_group_id = module.eks.cluster_security_group_id
+
+  depends_on = [module.vpc, module.eks]
 }
 
 module "monitoring" {
