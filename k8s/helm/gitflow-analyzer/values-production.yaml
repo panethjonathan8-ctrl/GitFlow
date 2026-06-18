@@ -44,7 +44,6 @@ networkPolicy:
   enabled: true
 
 ingress:
-  enabled: false
-  # Production has no separate public DNS entry in this project.
-  # www.gitflow.space currently points to the dev namespace via the shared ALB.
-  # To give production its own URL, add a host rule here and a DNS record.
+  enabled: true
+  # www.gitflow.space routes here — production is the only namespace with a public Ingress.
+  # Dev and staging are internal only (smoke tests + kubectl port-forward).

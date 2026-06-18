@@ -31,8 +31,6 @@ networkPolicy:
   enabled: true
 
 ingress:
-  enabled: true
-  # Requires the AWS Load Balancer Controller to be running in the cluster.
-  # Once enabled, the controller creates an internet-facing ALB automatically.
-  # The frontend and result-api LoadBalancer Services can then be switched to
-  # ClusterIP once the Ingress is confirmed working.
+  enabled: false
+  # Dev is internal only — accessed via the pipeline smoke test and kubectl port-forward.
+  # www.gitflow.space routes to production (see values-production.yaml).
