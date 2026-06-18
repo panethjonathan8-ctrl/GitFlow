@@ -63,12 +63,13 @@ resource "null_resource" "argocd_application" {
   triggers = {
     cluster_name = var.cluster_name
     aws_region   = var.aws_region
-    # Re-runs if any of the three Application manifests change.
-    # sha256(join(...)) combines all three hashes into one trigger value.
+    # Re-runs if any Application manifest changes.
+    # sha256(join(...)) combines all hashes into one trigger value.
     manifest_hash = sha256(join("", [
       filesha256("${path.root}/../../../k8s/argocd/application-dev.yaml"),
       filesha256("${path.root}/../../../k8s/argocd/application-staging.yaml"),
       filesha256("${path.root}/../../../k8s/argocd/application-production.yaml"),
+      filesha256("${path.root}/../../../k8s/argocd/application-grafana-dashboards.yaml"),
     ]))
   }
 
@@ -81,6 +82,7 @@ resource "null_resource" "argocd_application" {
       kubectl apply -f "${path.root}/../../../k8s/argocd/application-dev.yaml"
       kubectl apply -f "${path.root}/../../../k8s/argocd/application-staging.yaml"
       kubectl apply -f "${path.root}/../../../k8s/argocd/application-production.yaml"
+      kubectl apply -f "${path.root}/../../../k8s/argocd/application-grafana-dashboards.yaml"
       kubectl delete application gitflow-analyzer -n argocd --ignore-not-found=true 2>/dev/null || true
       echo "ArgoCD Applications registered — syncs will begin within ~3 minutes"
     EOT
@@ -95,7 +97,7 @@ resource "null_resource" "argocd_application" {
     when    = destroy
     command = <<-EOT
       aws eks update-kubeconfig --name "${self.triggers.cluster_name}" --region "${self.triggers.aws_region}" || true
-      for app in gitflow-analyzer-dev gitflow-analyzer-staging gitflow-analyzer-production gitflow-analyzer; do
+      for app in gitflow-analyzer-dev gitflow-analyzer-staging gitflow-analyzer-production grafana-dashboards gitflow-analyzer; do
         kubectl patch application "$app" -n argocd \
           -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
         kubectl delete application "$app" -n argocd --ignore-not-found=true 2>/dev/null || true

@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dashboards
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    # Deleting this Application also deletes the ConfigMap it manages.
+    # Prevents orphaned dashboard ConfigMaps when the cluster is torn down.
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/panethjonathan8-ctrl/GitFlow
+    targetRevision: main
+    path: k8s/helm/grafana-dashboards
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      # monitoring namespace is created by the kube-prometheus-stack Helm release
+      # (managed by Terraform). We must not recreate it here.
