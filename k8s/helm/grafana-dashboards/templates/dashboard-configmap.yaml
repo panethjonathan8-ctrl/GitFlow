@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitflow-app-dashboard
+  labels:
+    grafana_dashboard: "1"
+    # The kube-prometheus-stack sidecar watches for this label in the monitoring
+    # namespace and hot-loads matching ConfigMaps into Grafana automatically.
+data:
+  gitflow-app.json: |-
+    {{ .Files.Get "dashboards/gitflow-app.json" | nindent 4 }}

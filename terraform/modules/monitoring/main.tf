@@ -492,22 +492,6 @@ resource "helm_release" "metrics_server" {
   })]
 }
 
-# ── Grafana Dashboard ─────────────────────────────────────────────────────────
-# The kube-prometheus-stack sidecar watches for ConfigMaps labelled
-# grafana_dashboard="1" in the monitoring namespace and hot-loads them into
-# Grafana automatically — no pod restart needed.
-resource "kubernetes_config_map" "grafana_dashboard_app" {
-  metadata {
-    name      = "gitflow-app-dashboard"
-    namespace = kubernetes_namespace.monitoring.metadata[0].name
-    labels = {
-      grafana_dashboard = "1"
-    }
-  }
-
-  data = {
-    "gitflow-app.json" = file("${path.module}/dashboards/gitflow-app.json")
-  }
-
-  depends_on = [helm_release.kube_prometheus_stack]
-}
+# Dashboard ConfigMap removed from Terraform — now managed by ArgoCD via
+# k8s/helm/grafana-dashboards (see k8s/argocd/application-grafana-dashboards.yaml).
+# Terraform should manage infrastructure; runtime config belongs in Helm/ArgoCD.
