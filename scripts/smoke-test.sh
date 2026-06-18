@@ -25,7 +25,7 @@ kubectl rollout status deployment/result-api --namespace "$NAMESPACE" --timeout=
 # The & runs it in the background; we record its PID to kill it on exit.
 kubectl port-forward \
   --namespace "$NAMESPACE" \
-  svc/result-api "$LOCAL_PORT":80 &>/dev/null &
+  svc/result-api "$LOCAL_PORT":5000 &>/dev/null &
 PF_PID=$!
 trap "kill $PF_PID 2>/dev/null || true" EXIT
 

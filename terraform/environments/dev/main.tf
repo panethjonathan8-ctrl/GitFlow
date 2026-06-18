@@ -127,7 +127,7 @@ module "eks" {
   # t3a.large = 2 vCPU, 8 GB RAM — upgraded from t3a.medium to give
   # Prometheus + Grafana enough headroom alongside ArgoCD and the app pods.
   # Also raises the pod limit from 17 to ~36 (3 ENIs × 12 IPs per ENI).
-  desired_size            = 1
+  desired_size            = 2
   max_size                = 2
   github_actions_role_arn = module.iam.github_actions_role_arn
   # Grants the CI role Kubernetes API access so terraform plan/apply can
