@@ -2,7 +2,7 @@
 # Apply with: helm upgrade --install gitflow-analyzer-staging . -f values.yaml -f values-staging.yaml
 
 image:
-  tag: "91b861a"
+  tag: "4b801f6"
   # This line is overwritten automatically by the deploy pipeline.
   # Set to the same initial tag as dev so the chart renders on first apply.
 
