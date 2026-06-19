@@ -166,10 +166,10 @@ jobs:
           # changes will happen before approving the merge.
 
       - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'        
+        if: steps.plan.outcome == 'failure'
         run: |
           echo "Terraform plan failed — check the plan output above for errors"
           exit 1
-        
+
         # If the plan failed, fail the workflow so the PR is blocked.
         # This prevents merging broken infrastructure changes.

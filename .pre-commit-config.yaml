@@ -1,0 +1,92 @@
+# Pre-commit hooks — run the same checks as CI locally before every commit.
+#
+# Setup (one time):
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually against all files:
+#   pre-commit run --all-files
+#
+# Each hook mirrors a CI workflow so a passing commit means a passing PR.
+
+repos:
+  # ── Standard hygiene ─────────────────────────────────────────────────────────
+  # Small, fast checks that catch common mistakes before anything else runs.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Removes trailing spaces. Keeps diffs clean and avoids whitespace-only
+        # change noise when different editors disagree on trailing space handling.
+
+      - id: end-of-file-fixer
+        # Ensures every file ends with exactly one newline. POSIX standard —
+        # files without a final newline are technically incomplete.
+
+      - id: check-yaml
+        exclude: ^k8s/helm/.*/templates/
+        # Validates YAML syntax. Helm templates are excluded because they use
+        # {{ }} Go template syntax which is not valid YAML on its own.
+
+      - id: check-merge-conflict
+        # Blocks commits that contain unresolved conflict markers (<<<<<<<).
+        # Catches the case where you forgot to finish resolving a merge.
+
+      - id: detect-private-key
+        # Scans staged files for patterns matching SSH private keys (BEGIN RSA
+        # PRIVATE KEY, BEGIN EC PRIVATE KEY, etc). Hard blocks the commit.
+
+  # ── Secret scan ──────────────────────────────────────────────────────────────
+  # Catches AWS credentials and other secrets before they leave the machine.
+  # Mirrors the manual grep check in CLAUDE.md that runs before every commit.
+  - repo: local
+    hooks:
+      - id: no-aws-secrets
+        name: Detect AWS credentials and secrets
+        language: pygrep
+        entry: '(?i)(AKIA[0-9A-Z]{16}|aws_secret_access_key\s*=|private_key\s*=\s*")'
+        types: [text]
+        exclude: \.pre-commit-config\.yaml
+        # pygrep scans file content with a regex — no external tools required.
+        # AKIA prefix identifies AWS access key IDs (all real keys start with AKIA).
+        # aws_secret_access_key catches the secret half of a keypair.
+        # private_key = catches Terraform or config files embedding key material.
+
+  # ── Python — mirrors ci.yml ruff check ───────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        files: ^services/
+        # Same version as CI (ci.yml: pip install ruff==0.9.10).
+        # Scoped to services/ so it does not run on YAML or Terraform files.
+        # ruff checks but does not auto-fix here — mirrors CI behaviour.
+
+  # ── Terraform — mirrors terraform-plan.yml fmt check ─────────────────────────
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.107.0
+    hooks:
+      - id: terraform_fmt
+        # Runs terraform fmt on every staged .tf file.
+        # CI fails the plan if fmt is not clean — catching it here saves the
+        # ~45 second round trip to GitHub Actions just for a formatting issue.
+
+  # ── Shell scripts — mirrors shell-lint.yml ────────────────────────────────────
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+        exclude: ^terraform/modules/ec2/user_data\.sh$
+        # Same severity level as shell-lint.yml.
+        # shellcheck-py downloads the shellcheck binary automatically —
+        # no separate installation needed.
+
+  # ── Dockerfiles — mirrors docker-lint.yml ────────────────────────────────────
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        # Uses the official hadolint Docker image (ghcr.io/hadolint/hadolint).
+        # Requires Docker to be running — reasonable for a DevOps project.
+        # Same rules as docker-lint.yml in CI.

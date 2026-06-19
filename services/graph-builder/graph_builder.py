@@ -61,7 +61,7 @@ def parse_js_imports(file_path: str) -> list:
 def build_graph(repo_url: str) -> dict:
     """
     Clone the repo and build a dependency graph.
-    
+
     Returns a dict with:
     - nodes: list of {id, label, type} — files and modules
     - edges: list of {source, target} — import relationships

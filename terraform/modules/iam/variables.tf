@@ -31,4 +31,3 @@ variable "create_oidc_provider" {
   type        = bool
   default     = true
 }
-

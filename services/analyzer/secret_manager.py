@@ -6,10 +6,10 @@ from botocore.exceptions import ClientError
 def get_github_token() -> str:
     """
     Fetch the GitHub token from AWS Secrets Manager.
-    
+
     In production: fetches from Secrets Manager using the EC2 instance's
     IAM role — no credentials needed in code.
-    
+
     In local development: reads from the GITHUB_TOKEN environment variable
     so you do not need AWS credentials just to run the app locally.
     """

@@ -154,11 +154,11 @@ module "argocd" {
 module "irsa" {
   source = "../../modules/irsa"
 
-  project              = var.project
-  env                  = var.env
-  oidc_provider_arn    = module.eks.oidc_provider_arn
-  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
-  namespace            = "gitflow-analyzer-dev"
+  project           = var.project
+  env               = var.env
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+  namespace         = "gitflow-analyzer-dev"
   # Explicit namespace — the trust policy scopes credentials to pods in THIS
   # namespace only. Renamed from "gitflow-analyzer" to "gitflow-analyzer-dev"
   # as part of the multi-env migration (issue #57).
@@ -169,11 +169,11 @@ module "irsa" {
 module "irsa_staging" {
   source = "../../modules/irsa"
 
-  project              = var.project
-  env                  = "staging"
-  oidc_provider_arn    = module.eks.oidc_provider_arn
-  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
-  namespace            = "gitflow-analyzer-staging"
+  project           = var.project
+  env               = "staging"
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+  namespace         = "gitflow-analyzer-staging"
 
   depends_on = [module.eks]
 }
@@ -181,11 +181,11 @@ module "irsa_staging" {
 module "irsa_production" {
   source = "../../modules/irsa"
 
-  project              = var.project
-  env                  = "production"
-  oidc_provider_arn    = module.eks.oidc_provider_arn
-  oidc_issuer_url      = module.eks.cluster_oidc_issuer_url
-  namespace            = "gitflow-analyzer-production"
+  project           = var.project
+  env               = "production"
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_issuer_url   = module.eks.cluster_oidc_issuer_url
+  namespace         = "gitflow-analyzer-production"
 
   depends_on = [module.eks]
 }
