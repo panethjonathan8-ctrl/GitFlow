@@ -10,7 +10,7 @@ RUN groupadd --gid 1001 appgroup && \
     useradd --uid 1001 --gid appgroup --no-create-home appuser
 WORKDIR /app
 COPY --from=builder /root/.local /home/appuser/.local
-COPY app.py ./
+COPY app.py database.py ./
 RUN chown -R appuser:appgroup /app
 USER appuser
 ENV PATH=/home/appuser/.local/bin:$PATH
