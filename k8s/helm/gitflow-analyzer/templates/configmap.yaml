@@ -36,3 +36,9 @@ data:
   {{- range $key, $value := .Values.resultApi.env }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
+  {{- if .Values.resultApi.database.host }}
+  DB_HOST: {{ .Values.resultApi.database.host | quote }}
+  DB_PORT: {{ .Values.resultApi.database.port | quote }}
+  DB_NAME: {{ .Values.resultApi.database.name | quote }}
+  DB_USER: {{ .Values.resultApi.database.user | quote }}
+  {{- end }}

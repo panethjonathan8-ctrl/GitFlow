@@ -26,6 +26,14 @@ variable "public_subnet_cidrs" {
   # You only use one now but the second costs nothing until something is in it.
 }
 
+variable "private_subnet_cidrs" {
+  description = "IP ranges for the private subnets, one per availability zone. Used for RDS and any future private resources."
+  type        = list(string)
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
+  # These CIDRs sit inside the 10.0.0.0/16 VPC range but do not overlap with
+  # the public subnets (10.0.1.0/24, 10.0.2.0/24).
+}
+
 variable "aws_region" {
   description = "AWS region to deploy into"
   type        = string

@@ -30,6 +30,10 @@ pdb:
 networkPolicy:
   enabled: true
 
+resultApi:
+  database:
+    host: "gitflow-analyzer-dev.ctu2c220ahhs.eu-west-1.rds.amazonaws.com"
+
 ingress:
   enabled: false
   # Dev is internal only — accessed via the pipeline smoke test and kubectl port-forward.

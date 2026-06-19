@@ -27,6 +27,8 @@ resultApi:
     requests:
       cpu: 25m
       memory: 64Mi
+  database:
+    host: "gitflow-analyzer-dev.ctu2c220ahhs.eu-west-1.rds.amazonaws.com"
 
 serviceAccount:
   annotations:

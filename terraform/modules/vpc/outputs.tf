@@ -17,3 +17,8 @@ output "internet_gateway_id" {
   description = "ID of the internet gateway"
   value       = aws_internet_gateway.main.id
 }
+
+output "private_subnet_ids" {
+  description = "List of private subnet IDs — RDS and other non-internet-facing resources go here"
+  value       = aws_subnet.private[*].id
+}

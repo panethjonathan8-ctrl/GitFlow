@@ -355,6 +355,52 @@ resource "aws_iam_role_policy" "acm" {
   })
 }
 
+# ── Policy: RDS (PostgreSQL for result caching) ───────────────────────────────
+resource "aws_iam_role_policy" "rds" {
+  name = "rds-manage"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "RDSDescribe"
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBSubnetGroups",
+          "rds:DescribeDBParameterGroups",
+          "rds:DescribeDBEngineVersions",
+          "rds:DescribeOrderableDBInstanceOptions",
+          "rds:ListTagsForResource"
+        ]
+        # AWS does not support resource-level ARNs for Describe actions —
+        # they must be Resource: * or the calls are rejected.
+        Resource = "*"
+      },
+      {
+        Sid    = "RDSManage"
+        Effect = "Allow"
+        Action = [
+          "rds:CreateDBInstance",
+          "rds:ModifyDBInstance",
+          "rds:DeleteDBInstance",
+          "rds:CreateDBSubnetGroup",
+          "rds:ModifyDBSubnetGroup",
+          "rds:DeleteDBSubnetGroup",
+          "rds:AddTagsToResource",
+          "rds:RemoveTagsFromResource"
+        ]
+        # Scoped to this project's DB instances and subnet groups only.
+        Resource = [
+          "arn:aws:rds:*:${var.aws_account_id}:db:${var.project}-*",
+          "arn:aws:rds:*:${var.aws_account_id}:subgrp:${var.project}-*"
+        ]
+      }
+    ]
+  })
+}
+
 # ── Policy: SSM for EC2 remote commands ───────────────────────────────────────
 resource "aws_iam_role_policy" "ssm" {
   name = "ssm-ec2-commands"

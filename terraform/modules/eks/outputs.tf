@@ -38,3 +38,8 @@ output "node_group_name" {
   description = "Name of the managed node group"
   value       = aws_eks_node_group.main.node_group_name
 }
+
+output "cluster_security_group_id" {
+  description = "ID of the EKS cluster security group — attached to all nodes, used to scope RDS ingress rules"
+  value       = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
