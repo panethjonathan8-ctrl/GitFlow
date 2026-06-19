@@ -28,9 +28,7 @@ resultApi:
       cpu: 25m
       memory: 64Mi
   database:
-    host: ""
-    # Set this to the RDS endpoint after terraform apply:
-    # terraform -chdir=terraform/environments/dev output -raw rds_endpoint
+    host: "gitflow-analyzer-dev.ctu2c220ahhs.eu-west-1.rds.amazonaws.com"
 
 serviceAccount:
   annotations:

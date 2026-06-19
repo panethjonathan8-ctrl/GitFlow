@@ -5,7 +5,6 @@ from datetime import datetime, timezone, timedelta
 import boto3
 from botocore.exceptions import ClientError
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
 
