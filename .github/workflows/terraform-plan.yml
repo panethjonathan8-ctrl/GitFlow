@@ -88,7 +88,7 @@ jobs:
         run: |
           STATUS=$(aws eks describe-cluster \
             --name gitflow-analyzer-dev \
-            --region ${{ vars.AWS_REGION }} \
+            --region "${{ vars.AWS_REGION }}" \
             --query "cluster.status" \
             --output text 2>/dev/null || echo "NOTFOUND")
           echo "status=$STATUS" >> $GITHUB_OUTPUT

@@ -48,7 +48,7 @@ jobs:
       - name: Check if EKS cluster exists
         id: eks-check
         run: |
-          if aws eks describe-cluster --name gitflow-analyzer-dev --region ${{ vars.AWS_REGION }} &>/dev/null; then
+          if aws eks describe-cluster --name gitflow-analyzer-dev --region "${{ vars.AWS_REGION }}" &>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "EKS cluster found — proceeding with rollback"
           else
@@ -61,7 +61,7 @@ jobs:
         env:
           TAG: ${{ inputs.image_tag }}
           ENV: ${{ inputs.environment }}
-        run: python3 scripts/update-image-tag.py k8s/helm/gitflow-analyzer/values-${ENV}.yaml "$TAG"
+        run: python3 scripts/update-image-tag.py "k8s/helm/gitflow-analyzer/values-${ENV}.yaml" "$TAG"
 
       - name: Commit and push rollback tag
         if: steps.eks-check.outputs.exists == 'true'
