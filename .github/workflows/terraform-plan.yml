@@ -91,7 +91,7 @@ jobs:
             --region "${{ vars.AWS_REGION }}" \
             --query "cluster.status" \
             --output text 2>/dev/null || echo "NOTFOUND")
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           if [ "$STATUS" = "ACTIVE" ]; then
             echo "Cluster is ACTIVE — full terraform plan will run"
           else

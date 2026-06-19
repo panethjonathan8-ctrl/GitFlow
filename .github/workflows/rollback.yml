@@ -49,10 +49,10 @@ jobs:
         id: eks-check
         run: |
           if aws eks describe-cluster --name gitflow-analyzer-dev --region "${{ vars.AWS_REGION }}" &>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "EKS cluster found — proceeding with rollback"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "EKS cluster not found — skipping"
           fi
 
