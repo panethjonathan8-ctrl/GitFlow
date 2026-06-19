@@ -38,18 +38,18 @@ jobs:
       - name: Set image tag
         id: tag
         run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "Image tag: $SHORT_SHA"
 
       - name: Check if EKS cluster exists
         id: eks-check
         run: |
-          if aws eks describe-cluster --name gitflow-analyzer-dev --region ${{ vars.AWS_REGION }} &>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+          if aws eks describe-cluster --name gitflow-analyzer-dev --region "${{ vars.AWS_REGION }}" &>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "EKS cluster found — deploy jobs will run"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "EKS cluster not running — deploy jobs will skip EKS steps"
           fi
 
