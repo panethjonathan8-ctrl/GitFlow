@@ -1,0 +1,35 @@
+name: GitHub Actions Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/**"
+  # Runs only when workflow files or other .github config changes.
+  # Self-referential: this workflow lints itself when it is modified.
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) v1.7.7
+          mv actionlint /usr/local/bin/
+        # actionlint is a static analyser for GitHub Actions workflow files.
+        # It catches things like:
+        #   - Typos in action names (actions/chekcout instead of actions/checkout)
+        #   - Invalid expression syntax in ${{ }} blocks
+        #   - Referencing an output from a step that does not define it
+        #   - Missing required inputs for an action
+        #   - Incorrect job dependency names in 'needs:'
+        # Pinned to v1.7.7 for reproducible CI behaviour.
+
+      - name: Lint all workflow files
+        run: actionlint
+        # With no arguments, actionlint finds and checks all workflow files
+        # under .github/workflows/ automatically.

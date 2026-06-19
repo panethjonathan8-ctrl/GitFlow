@@ -1,0 +1,60 @@
+name: Helm Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "k8s/**"
+  # Only runs when Helm charts or ArgoCD manifests change.
+  # Skipped entirely on Python-only or Terraform-only PRs.
+
+jobs:
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.17.0"
+          # Pin to a specific version so CI behaviour does not change
+          # unexpectedly when a new Helm release drops.
+
+      - name: Lint gitflow-analyzer chart (base values)
+        run: helm lint k8s/helm/gitflow-analyzer/
+        # helm lint reads Chart.yaml, validates template syntax, and checks
+        # that all required values are present. Catches things like a missing
+        # closing brace in a template or a required field left blank.
+
+      - name: Lint gitflow-analyzer chart (dev values)
+        run: helm lint k8s/helm/gitflow-analyzer/ -f k8s/helm/gitflow-analyzer/values-dev.yaml
+        # Re-lint with each environment overlay to ensure the merged value
+        # set is valid. A value introduced only in values-dev.yaml would not
+        # be caught by the base lint above.
+
+      - name: Lint gitflow-analyzer chart (staging values)
+        run: helm lint k8s/helm/gitflow-analyzer/ -f k8s/helm/gitflow-analyzer/values-staging.yaml
+
+      - name: Lint gitflow-analyzer chart (production values)
+        run: helm lint k8s/helm/gitflow-analyzer/ -f k8s/helm/gitflow-analyzer/values-production.yaml
+
+      - name: Lint grafana-dashboards chart
+        run: helm lint k8s/helm/grafana-dashboards/
+
+      - name: Template gitflow-analyzer chart (dev)
+        run: |
+          helm template gitflow-analyzer k8s/helm/gitflow-analyzer/ \
+            -f k8s/helm/gitflow-analyzer/values-dev.yaml \
+            --namespace gitflow-analyzer-dev > /dev/null
+        # helm template renders all Kubernetes YAML without talking to a cluster.
+        # Catches template errors that helm lint misses — for example, a range
+        # loop that references a key which does not exist in values.yaml.
+
+      - name: Template gitflow-analyzer chart (production)
+        run: |
+          helm template gitflow-analyzer k8s/helm/gitflow-analyzer/ \
+            -f k8s/helm/gitflow-analyzer/values-production.yaml \
+            --namespace gitflow-analyzer-production > /dev/null
