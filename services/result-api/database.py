@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from datetime import datetime, timezone, timedelta
 
@@ -98,8 +99,8 @@ def store_result(engine, repo_url: str, result: dict) -> None:
         conn.execute(
             text("""
                 INSERT INTO analyses (repo_url, result)
-                VALUES (:url, :result::jsonb)
+                VALUES (:url, CAST(:result AS jsonb))
             """),
-            {"url": repo_url, "result": __import__("json").dumps(result)},
+            {"url": repo_url, "result": json.dumps(result)},
         )
     logger.info("Stored result for %s", repo_url)
