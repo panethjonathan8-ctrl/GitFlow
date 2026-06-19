@@ -27,7 +27,7 @@ kubectl port-forward \
   --namespace "$NAMESPACE" \
   svc/result-api "$LOCAL_PORT":5000 &>/dev/null &
 PF_PID=$!
-trap "kill $PF_PID 2>/dev/null || true" EXIT
+trap 'kill $PF_PID 2>/dev/null || true' EXIT
 
 # Give the tunnel 3 seconds to establish before hitting it.
 sleep 3

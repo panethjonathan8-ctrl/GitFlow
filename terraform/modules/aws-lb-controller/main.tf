@@ -1,7 +1,7 @@
 locals {
-  oidc_host              = replace(var.oidc_issuer_url, "https://", "")
-  controller_sa_name     = "aws-load-balancer-controller"
-  controller_namespace   = "kube-system"
+  oidc_host            = replace(var.oidc_issuer_url, "https://", "")
+  controller_sa_name   = "aws-load-balancer-controller"
+  controller_namespace = "kube-system"
   # The controller runs in kube-system by convention — it is cluster infrastructure,
   # not application code. Keeping it separate from application namespaces also
   # means RBAC policies for app namespaces do not accidentally affect it.
@@ -88,8 +88,8 @@ data "aws_iam_policy_document" "lb_controller" {
   }
 
   statement {
-    sid    = "TagSecurityGroupsAndENIs"
-    effect = "Allow"
+    sid     = "TagSecurityGroupsAndENIs"
+    effect  = "Allow"
     actions = ["ec2:CreateTags", "ec2:DeleteTags"]
     resources = [
       "arn:aws:ec2:*:*:security-group/*",
@@ -153,9 +153,9 @@ data "aws_iam_policy_document" "lb_controller" {
 
   # Create the ELB service-linked role on first use in the account
   statement {
-    sid     = "CreateELBServiceLinkedRole"
-    effect  = "Allow"
-    actions = ["iam:CreateServiceLinkedRole"]
+    sid       = "CreateELBServiceLinkedRole"
+    effect    = "Allow"
+    actions   = ["iam:CreateServiceLinkedRole"]
     resources = ["*"]
     condition {
       test     = "StringEquals"
@@ -197,9 +197,9 @@ data "aws_iam_policy_document" "lb_controller" {
 
   # Read Cognito user pools for ALB authentication actions
   statement {
-    sid     = "ReadCognito"
-    effect  = "Allow"
-    actions = ["cognito-idp:DescribeUserPoolClient"]
+    sid       = "ReadCognito"
+    effect    = "Allow"
+    actions   = ["cognito-idp:DescribeUserPoolClient"]
     resources = ["*"]
   }
 

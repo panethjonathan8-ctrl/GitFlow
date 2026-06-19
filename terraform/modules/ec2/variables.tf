@@ -62,4 +62,3 @@ variable "ec2_public_key" {
   description = "SSH public key content for EC2 access"
   type        = string
 }
-

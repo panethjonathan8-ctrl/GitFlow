@@ -38,13 +38,13 @@ module "vpc" {
 }
 
 module "iam" {
-  source          = "../../modules/iam"
-  project         = var.project
-  env             = var.env
-  github_username = var.github_username
-  github_repo     = "GitFlow"
-  aws_account_id  = var.aws_account_id
-    create_oidc_provider = false
+  source               = "../../modules/iam"
+  project              = var.project
+  env                  = var.env
+  github_username      = var.github_username
+  github_repo          = "GitFlow"
+  aws_account_id       = var.aws_account_id
+  create_oidc_provider = false
 }
 
 
