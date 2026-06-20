@@ -279,13 +279,27 @@ module "frontend_cdn" {
 module "rds" {
   source = "../../modules/rds"
 
-  project                    = var.project
-  env                        = var.env
-  vpc_id                     = module.vpc.vpc_id
-  private_subnet_ids         = module.vpc.private_subnet_ids
-  eks_node_security_group_id = module.eks.cluster_security_group_id
+  project            = var.project
+  env                = var.env
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  # No depends_on or EKS reference here. The VPC dependency is implicit via
+  # vpc_id and private_subnet_ids. The EKS → RDS port 5432 rule is managed
+  # by the standalone resource below so RDS survives nightly EKS teardowns.
+}
 
-  depends_on = [module.vpc, module.eks]
+# ── EKS → RDS access rule ─────────────────────────────────────────────────────
+# Allows pods on EKS nodes to connect to PostgreSQL on port 5432.
+# Lives here (not inside module.rds) so it is destroyed and recreated with
+# the EKS cluster. The RDS instance and its security group are unaffected.
+resource "aws_security_group_rule" "eks_to_rds" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = module.rds.rds_security_group_id
+  source_security_group_id = module.eks.cluster_security_group_id
+  description              = "PostgreSQL from EKS nodes"
 }
 
 module "monitoring" {

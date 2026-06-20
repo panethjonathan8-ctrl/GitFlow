@@ -18,11 +18,6 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
-variable "eks_node_security_group_id" {
-  description = "Security group ID of the EKS nodes — only this SG gets port 5432 access"
-  type        = string
-}
-
 variable "db_name" {
   description = "Name of the initial database to create inside the PostgreSQL instance"
   type        = string
