@@ -22,3 +22,8 @@ output "password_secret_name" {
   description = "Secrets Manager secret name containing the DB password"
   value       = aws_secretsmanager_secret.db_password.name
 }
+
+output "rds_security_group_id" {
+  description = "ID of the RDS security group — used by the EKS-to-RDS ingress rule in main.tf"
+  value       = aws_security_group.rds.id
+}

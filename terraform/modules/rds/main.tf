@@ -21,15 +21,10 @@ resource "aws_security_group" "rds" {
   description = "Allow PostgreSQL access from EKS nodes only"
   vpc_id      = var.vpc_id
 
-  ingress {
-    description     = "PostgreSQL from EKS nodes"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [var.eks_node_security_group_id]
-    # Referencing the EKS node SG directly means only pods running on those
-    # nodes can reach the database. A CIDR-based rule would be broader.
-  }
+  # No ingress rules are defined here. The rule that allows EKS nodes to reach
+  # port 5432 lives in a standalone aws_security_group_rule in the environment
+  # main.tf. This decouples RDS from EKS: the rule is destroyed and recreated
+  # with the cluster while the database instance survives nightly teardowns.
 
   egress {
     description = "Allow all outbound"
