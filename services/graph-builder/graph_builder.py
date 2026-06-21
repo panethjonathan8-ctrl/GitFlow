@@ -78,7 +78,10 @@ def build_graph(repo_url: str) -> dict:
         else:
             authenticated_url = repo_url
 
-        Repo.clone_from(authenticated_url, temp_dir, depth=1)
+        try:
+            Repo.clone_from(authenticated_url, temp_dir, depth=1)
+        except Exception as e:
+            raise ValueError(f"Failed to clone repository: {str(e)}")
 
         nodes = []
         edges = []
