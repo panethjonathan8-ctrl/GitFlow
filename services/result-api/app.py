@@ -86,6 +86,11 @@ def analyze():
             json={"repo_url": repo_url},
             timeout=120
         )
+        if analyzer_response.status_code == 400:
+            error_msg = analyzer_response.json().get("error", "Analysis failed")
+            if "clone" in error_msg.lower() or "authentication" in error_msg.lower():
+                error_msg = "This repository is private or could not be accessed. GitFlow Analyzer can only analyze public GitHub repositories."
+            return jsonify({"error": error_msg}), 400
         analyzer_response.raise_for_status()
         analysis = analyzer_response.json()
 
@@ -96,6 +101,11 @@ def analyze():
             json={"repo_url": repo_url},
             timeout=120
         )
+        if graph_response.status_code == 400:
+            error_msg = graph_response.json().get("error", "Graph build failed")
+            if "clone" in error_msg.lower() or "authentication" in error_msg.lower():
+                error_msg = "This repository is private or could not be accessed. GitFlow Analyzer can only analyze public GitHub repositories."
+            return jsonify({"error": error_msg}), 400
         graph_response.raise_for_status()
         graph = graph_response.json()
 
