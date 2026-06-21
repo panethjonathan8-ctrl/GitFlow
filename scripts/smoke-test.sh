@@ -48,14 +48,31 @@ echo "PASS: /health returned 200"
 # GitHub API (using the token from Secrets Manager). A failure here means
 # either the upstream services are broken or the Secrets Manager secret for
 # this environment is missing or wrong.
+#
+# Retried up to 3 times with a 15-second gap. On a freshly deployed cluster
+# the IRSA credential chain (pod → AWS STS → Secrets Manager) can take a few
+# seconds to warm up, causing the first request to fail transiently.
 echo "Checking /analyze..."
-RESPONSE=$(curl -sf -X POST "$BASE/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{"repo_url":"https://github.com/panethjonathan8-ctrl/GitFlow"}')
+MAX_RETRIES=3
+RETRY_DELAY=15
+ATTEMPT=0
+STATUS=""
 
-STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
+until [ "$STATUS" = "success" ] || [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; do
+  ATTEMPT=$((ATTEMPT + 1))
+  echo "  Attempt $ATTEMPT/$MAX_RETRIES..."
+  RESPONSE=$(curl -s -X POST "$BASE/analyze" \
+    -H "Content-Type: application/json" \
+    -d '{"repo_url":"https://github.com/panethjonathan8-ctrl/GitFlow"}') || true
+  STATUS=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || true)
+  if [ "$STATUS" != "success" ] && [ "$ATTEMPT" -lt "$MAX_RETRIES" ]; then
+    echo "  Not ready yet, retrying in ${RETRY_DELAY}s..."
+    sleep "$RETRY_DELAY"
+  fi
+done
+
 if [ "$STATUS" != "success" ]; then
-  echo "FAIL: /analyze returned status='$STATUS'"
+  echo "FAIL: /analyze did not return status=success after $MAX_RETRIES attempts"
   echo "Full response: $RESPONSE"
   exit 1
 fi
