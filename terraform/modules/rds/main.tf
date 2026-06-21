@@ -63,6 +63,10 @@ resource "aws_secretsmanager_secret" "db_password" {
     Project     = var.project
     Environment = var.env
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "db_password" {
@@ -102,5 +106,9 @@ resource "aws_db_instance" "main" {
     Name        = "${var.project}-${var.env}-postgres"
     Project     = var.project
     Environment = var.env
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
