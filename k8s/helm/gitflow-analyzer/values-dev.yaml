@@ -2,7 +2,7 @@
 # Apply with: helm upgrade --install gitflow-analyzer . -f values.yaml -f values-dev.yaml
 
 image:
-  tag: "06e4447"
+  tag: "4871582"
   # This line is overwritten automatically by the CI pipeline (scripts/update-image-tag.py)
   # on every deploy. ArgoCD detects the commit and rolls out the new image.
 
