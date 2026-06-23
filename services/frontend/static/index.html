@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitFlow Analyzer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.29.2/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape-fcose@2.2.0/cytoscape-fcose.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -395,61 +396,65 @@ function initGraph() {
         selector: 'node[type = "file"]',
         style: {
           'background-color': '#7c3aed',
-          'border-color': '#a78bfa',
-          'border-width': 1.5,
+          'border-width': 0,
           'shape': 'ellipse',
           'label': 'data(shortLabel)',
-          'color': '#d4d4d4',
+          'color': '#888888',
           'font-size': 9,
           'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 5,
-          'width': 22,
-          'height': 22,
+          'text-margin-y': 4,
+          'width': 14,
+          'height': 14,
           'text-max-width': 80,
-          'text-wrap': 'ellipsis'
+          'text-wrap': 'ellipsis',
+          'min-zoomed-font-size': 8
         }
       },
       {
         selector: 'node[type = "module"]',
         style: {
-          'background-color': '#0891b2',
-          'border-color': '#22d3ee',
-          'border-width': 1,
+          'background-color': '#1e4d5c',
+          'border-width': 0,
           'shape': 'ellipse',
           'label': 'data(label)',
-          'color': '#d4d4d4',
-          'font-size': 9,
+          'color': '#666666',
+          'font-size': 8,
           'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 5,
-          'width': 14,
-          'height': 14
+          'text-margin-y': 3,
+          'width': 9,
+          'height': 9,
+          'min-zoomed-font-size': 8
         }
       },
       {
         selector: 'edge',
         style: {
-          'width': 1,
-          'line-color': '#2a2a2a',
-          'target-arrow-color': '#3a3a3a',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
-          'opacity': 0.6,
-          'arrow-scale': 0.7
+          'width': 0.8,
+          'line-color': '#3a3a3a',
+          'target-arrow-shape': 'none',
+          'curve-style': 'straight',
+          'opacity': 0.5
         }
       },
       {
         selector: 'node.highlighted',
-        style: { 'border-color': '#e4e4e4', 'border-width': 3, 'opacity': 1 }
+        style: {
+          'border-width': 3,
+          'border-color': '#a78bfa',
+          'border-opacity': 0.9,
+          'color': '#d4d4d4',
+          'opacity': 1
+        }
       },
       {
         selector: 'node.dimmed',
-        style: { 'opacity': 0.15 }
+        style: { 'opacity': 0.08 }
       },
       {
         selector: 'edge.highlighted',
-        style: { 'line-color': '#a78bfa', 'target-arrow-color': '#a78bfa', 'width': 2, 'opacity': 1 }
+        style: { 'line-color': '#a78bfa', 'width': 1.5, 'opacity': 0.9 }
       },
       {
         selector: 'edge.dimmed',
@@ -617,23 +622,42 @@ function renderGraph(graph) {
   cy.elements().remove();
   cy.add(elements);
 
-  // Apply per-node group colour for file nodes.
-  cy.nodes('[type = "file"]').forEach(node => {
+  // Apply per-node group colour and scale size by degree (Obsidian-style).
+  cy.nodes().forEach(node => {
+    const isFile = node.data('type') === 'file';
     const color = node.data('color');
-    if (color) {
-      node.style({ 'background-color': color, 'border-color': color });
+    if (isFile && color) {
+      node.style({ 'background-color': color });
     }
+    // Nodes with more connections get a larger dot — matches Obsidian behaviour.
+    const deg = node.degree(false);
+    const base = isFile ? 14 : 9;
+    const size = Math.min(base + deg * 2, 42);
+    node.style({ width: size, height: size });
   });
 
   cy.layout({
-    name: 'breadthfirst',
+    name: 'fcose',
+    quality: 'default',
     animate: true,
-    animationDuration: 600,
-    directed: true,
-    spacingFactor: 1.4,
-    padding: 40,
-    avoidOverlap: true,
-    nodeDimensionsIncludeLabels: true
+    animationDuration: 900,
+    randomize: true,
+    fit: true,
+    padding: 50,
+    // Nodes repel each other — higher = more breathing room between clusters.
+    nodeRepulsion: () => 5500,
+    // Connected nodes are pulled to this distance apart.
+    idealEdgeLength: edge => {
+      const sg = edge.source().data('group');
+      const tg = edge.target().data('group');
+      // Same-directory files sit closer together, forming tight clusters.
+      return sg && tg && sg === tg ? 60 : 110;
+    },
+    edgeElasticity: () => 0.45,
+    // Gravity pulls the whole graph toward the centre so it doesn't drift apart.
+    gravity: 0.25,
+    gravityRange: 3.8,
+    numIter: 2500,
   }).run();
 
   document.getElementById('graph-hint').style.display = 'block';
