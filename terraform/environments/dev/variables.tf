@@ -64,3 +64,19 @@ variable "github_oauth_allowed_user" {
   description = "GitHub username allowed to log into Grafana"
   type        = string
 }
+
+variable "argocd_github_oauth_client_id" {
+  description = "GitHub OAuth App client ID for ArgoCD login — create a separate OAuth App from the Grafana one"
+  type        = string
+}
+
+variable "argocd_github_oauth_client_secret" {
+  description = "GitHub OAuth App client secret for ArgoCD — store in terraform.tfvars only, never commit"
+  type        = string
+  sensitive   = true
+}
+
+variable "argocd_github_allowed_user" {
+  description = "GitHub username allowed to log into ArgoCD — all other accounts are rejected"
+  type        = string
+}

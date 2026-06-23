@@ -7,8 +7,14 @@ ecr_registry    = "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com"
 ecr_repo        = "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/gitflow-analyzer/analyzer"
 grafana_admin_password = "YOUR_GRAFANA_PASSWORD_HERE"
 
-# GitHub OAuth for Grafana /dashboard — create the app at github.com/settings/developers
-# Callback URL must be: https://gitflow.space/dashboard/login/github
+# GitHub OAuth for Grafana — create the app at github.com/settings/developers
+# Callback URL must be: https://grafana.gitflow.space/login/github
 github_oauth_client_id      = "YOUR_GITHUB_OAUTH_CLIENT_ID"
 github_oauth_client_secret  = "YOUR_GITHUB_OAUTH_CLIENT_SECRET"
 github_oauth_allowed_user   = "YOUR_GITHUB_USERNAME"
+
+# GitHub OAuth for ArgoCD — create a SEPARATE OAuth App from the Grafana one
+# Callback URL must be: https://argocd.gitflow.space/api/dex/callback
+argocd_github_oauth_client_id     = "YOUR_ARGOCD_GITHUB_OAUTH_CLIENT_ID"
+argocd_github_oauth_client_secret = "YOUR_ARGOCD_GITHUB_OAUTH_CLIENT_SECRET"
+argocd_github_allowed_user        = "YOUR_GITHUB_USERNAME"

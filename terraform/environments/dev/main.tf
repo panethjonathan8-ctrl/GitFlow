@@ -146,6 +146,10 @@ module "argocd" {
   aws_region      = var.aws_region
   github_username = var.github_username
 
+  argocd_github_oauth_client_id     = var.argocd_github_oauth_client_id
+  argocd_github_oauth_client_secret = var.argocd_github_oauth_client_secret
+  argocd_github_allowed_user        = var.argocd_github_allowed_user
+
   depends_on = [module.eks]
   # ArgoCD can only be installed after the cluster and node group are fully
   # ready — depends_on enforces that order.
@@ -300,6 +304,24 @@ resource "aws_security_group_rule" "eks_to_rds" {
   security_group_id        = module.rds.rds_security_group_id
   source_security_group_id = module.eks.cluster_security_group_id
   description              = "PostgreSQL from EKS nodes"
+}
+
+module "argocd_cdn" {
+  source = "../../modules/argocd-cdn"
+
+  project      = var.project
+  env          = var.env
+  alb_dns_name = data.aws_ssm_parameter.alb_dns_name.value
+  # argocd_hostname uses module default (argocd.gitflow.space)
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  depends_on = [module.argocd]
+  # The Ingress (which creates the ALB route) is part of the ArgoCD Helm
+  # release. CloudFront must point at the ALB only after that route exists.
 }
 
 module "monitoring" {

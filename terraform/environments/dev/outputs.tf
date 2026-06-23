@@ -67,3 +67,13 @@ output "rds_password_secret" {
   description = "Secrets Manager secret name holding the DB password"
   value       = module.rds.password_secret_name
 }
+
+output "argocd_cloudfront_domain" {
+  description = "Add this as the CNAME value for argocd.gitflow.space in GoDaddy"
+  value       = module.argocd_cdn.argocd_cloudfront_domain
+}
+
+output "argocd_acm_validation_record" {
+  description = "Add this CNAME to GoDaddy to validate the ArgoCD SSL certificate before CloudFront will serve HTTPS"
+  value       = module.argocd_cdn.argocd_acm_validation_record
+}
