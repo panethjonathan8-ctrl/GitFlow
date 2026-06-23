@@ -336,12 +336,16 @@
       <div class="legend">
         <div class="legend-item">
           <div class="legend-dot" style="background:#7c3aed"></div>
-          <span>Source file (.py / .js / .ts)</span>
+          <span>Source file (colour = directory)</span>
         </div>
         <div class="legend-item">
           <div class="legend-dot" style="background:#0891b2"></div>
           <span>Imported module / package</span>
         </div>
+      </div>
+      <div id="group-legend" style="margin-top:10px;display:none">
+        <div style="font-size:11px;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px">Directories</div>
+        <div id="group-legend-items" class="legend"></div>
       </div>
     </div>
 
@@ -357,7 +361,7 @@
         <line x1="5" y1="18" x2="10" y2="13"/><line x1="19" y1="18" x2="14" y2="13"/>
       </svg>
       <p>Enter a GitHub repo URL to visualise its dependency graph</p>
-      <small>Supports Python, JavaScript and TypeScript repos</small>
+      <small>Supports any public GitHub repository</small>
     </div>
     <button class="reset-view-btn" id="reset-view-btn" onclick="resetView()">⊙ Reset view</button>
     <div class="graph-hint" id="graph-hint" style="display:none">
@@ -372,7 +376,15 @@ const LANG_COLORS = [
   '#be185d','#0369a1','#6d28d9','#047857','#9f1239'
 ];
 
+// Palette for directory groups — distinct enough to tell apart at a glance.
+const GROUP_COLORS = [
+  '#7c3aed','#059669','#b45309','#be185d','#0369a1',
+  '#6d28d9','#047857','#9f1239','#1d4ed8','#b91c1c',
+  '#0e7490','#4d7c0f','#92400e','#6b21a8','#0f766e'
+];
+
 let cy = null;
+let groupColorMap = {};
 
 function initGraph() {
   cy = cytoscape({
@@ -558,8 +570,33 @@ function renderFrameworks(frameworks) {
   section.style.display = 'block';
 }
 
+function buildGroupColorMap(nodes) {
+  const groups = [...new Set(nodes.filter(n => n.group).map(n => n.group))].sort();
+  groupColorMap = {};
+  groups.forEach((g, i) => {
+    groupColorMap[g] = GROUP_COLORS[i % GROUP_COLORS.length];
+  });
+
+  // Render directory legend
+  const legendEl = document.getElementById('group-legend');
+  const itemsEl = document.getElementById('group-legend-items');
+  if (groups.length > 1) {
+    itemsEl.innerHTML = groups.map(g =>
+      `<div class="legend-item">
+        <div class="legend-dot" style="background:${groupColorMap[g]}"></div>
+        <span>${g}</span>
+      </div>`
+    ).join('');
+    legendEl.style.display = 'block';
+  } else {
+    legendEl.style.display = 'none';
+  }
+}
+
 function renderGraph(graph) {
   if (!cy) initGraph();
+
+  buildGroupColorMap(graph.nodes);
 
   const elements = [
     ...graph.nodes.map(n => ({
@@ -567,7 +604,9 @@ function renderGraph(graph) {
         id: n.id,
         label: n.label,
         shortLabel: n.label.includes('/') ? n.label.split('/').pop() : n.label,
-        type: n.type
+        type: n.type,
+        group: n.group || null,
+        color: n.type === 'file' && n.group ? groupColorMap[n.group] : null
       }
     })),
     ...graph.edges.map((e, i) => ({
@@ -578,22 +617,23 @@ function renderGraph(graph) {
   cy.elements().remove();
   cy.add(elements);
 
+  // Apply per-node group colour for file nodes.
+  cy.nodes('[type = "file"]').forEach(node => {
+    const color = node.data('color');
+    if (color) {
+      node.style({ 'background-color': color, 'border-color': color });
+    }
+  });
+
   cy.layout({
-    name: 'cose',
+    name: 'breadthfirst',
     animate: true,
-    animationDuration: 800,
-    randomize: true,
-    componentSpacing: 120,
-    nodeRepulsion: 450000,
-    nodeOverlap: 20,
-    edgeElasticity: 100,
-    idealEdgeLength: 80,
-    gravity: 0.8,
-    numIter: 1500,
-    initialTemp: 200,
-    coolingFactor: 0.95,
-    nodeDimensionsIncludeLabels: true,
-    padding: 30
+    animationDuration: 600,
+    directed: true,
+    spacingFactor: 1.4,
+    padding: 40,
+    avoidOverlap: true,
+    nodeDimensionsIncludeLabels: true
   }).run();
 
   document.getElementById('graph-hint').style.display = 'block';
