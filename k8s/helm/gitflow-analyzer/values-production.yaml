@@ -2,7 +2,7 @@
 # Apply with: helm upgrade --install gitflow-analyzer-production . -f values.yaml -f values-production.yaml
 
 image:
-  tag: "4871582"
+  tag: "d88f828"
   # This line is overwritten automatically by the deploy pipeline after
   # a human approves the production deployment in GitHub Actions.
 
