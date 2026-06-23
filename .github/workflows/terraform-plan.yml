@@ -59,12 +59,32 @@ jobs:
           # Pin to the exact version you are using locally.
           # Prevents CI from using a different version than your machine.
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-providers-${{ hashFiles('terraform/environments/dev/.terraform.lock.hcl') }}
+          restore-keys: terraform-providers-
+        # Providers (~150 MB) are downloaded fresh on every run without this.
+        # The cache key is the lock file hash — a new key is only generated when
+        # you change a provider version, forcing a fresh download then caching it.
+
+      - name: Create Terraform plugin cache dir
+        run: mkdir -p ~/.terraform.d/plugin-cache
+        # actions/cache restores files but does not create the directory if
+        # the cache is empty. Terraform errors if TF_PLUGIN_CACHE_DIR points
+        # at a path that does not exist, so we create it unconditionally here.
+
       - name: Terraform Init
         id: init
         working-directory: terraform/environments/dev
         run: terraform init
+        env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
         # Initialises the S3 backend and downloads providers.
         # Uses the AWS credentials from the OIDC step above to access your state bucket.
+        # TF_PLUGIN_CACHE_DIR tells Terraform to read/write providers from the
+        # cache directory populated by the actions/cache step above.
 
       - name: Terraform Format Check
         id: fmt
@@ -106,19 +126,21 @@ jobs:
         working-directory: terraform/environments/dev
         run: |
           if [ "${{ steps.cluster_check.outputs.status }}" = "ACTIVE" ]; then
-            terraform plan -no-color -out=tfplan -lock-timeout=120s
+            terraform plan -no-color -out=tfplan -lock=false
           else
             # Cluster is down — plan only the AWS-layer modules.
             # module.monitoring and module.argocd use Helm/Kubernetes providers
             # and will hang if the cluster API is unreachable.
-            terraform plan -no-color -out=tfplan -lock-timeout=120s \
+            terraform plan -no-color -out=tfplan -lock=false \
               -target=module.vpc \
               -target=module.iam \
               -target=module.ecr \
               -target=module.secrets \
-              -target=module.frontend_cdn
+              -target=module.frontend_cdn \
+              -target=module.argocd_cdn
           fi
         env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
           TF_VAR_aws_account_id: ${{ vars.AWS_ACCOUNT_ID }}
           TF_VAR_github_username: ${{ vars.THE_USERNAME }}
           TF_VAR_ec2_public_key: ${{ vars.EC2_PUBLIC_KEY }}
@@ -126,6 +148,9 @@ jobs:
           TF_VAR_github_oauth_client_id: ${{ vars.GH_OAUTH_CLIENT_ID }}
           TF_VAR_github_oauth_client_secret: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
           TF_VAR_github_oauth_allowed_user: ${{ vars.GH_OAUTH_ALLOWED_USER }}
+          TF_VAR_argocd_github_oauth_client_id: ${{ vars.ARGOCD_GH_OAUTH_CLIENT_ID }}
+          TF_VAR_argocd_github_oauth_client_secret: ${{ secrets.ARGOCD_GH_OAUTH_CLIENT_SECRET }}
+          TF_VAR_argocd_github_allowed_user: ${{ vars.GH_OAUTH_ALLOWED_USER }}
           # TF_VAR_ prefix is how you pass Terraform variables from
           # environment variables. This keeps the values out of your
           # tfvars files in CI while still being available to Terraform.

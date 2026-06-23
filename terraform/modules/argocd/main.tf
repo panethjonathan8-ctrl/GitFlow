@@ -31,23 +31,69 @@ resource "helm_release" "argocd" {
     yamlencode({
       configs = {
         params = {
+          # TLS is terminated at CloudFront — ArgoCD itself speaks plain HTTP.
           "server.insecure" = "true"
-          # Disables TLS on the ArgoCD server process itself.
-          # Fine for dev — TLS would be terminated at the Load Balancer or
-          # an Ingress in a production setup with a real domain.
+        }
+        cm = {
+          # Must match the public URL so Dex generates correct redirect URIs.
+          url = "https://${var.argocd_hostname}"
+        }
+        secret = {
+          # Injects dex.github.clientSecret into argocd-secret so the Dex
+          # config below can reference it with $dex.github.clientSecret without
+          # embedding the plaintext value in argocd-cm (a non-secret ConfigMap).
+          extra = {
+            "dex.github.clientSecret" = var.argocd_github_oauth_client_secret
+          }
+        }
+        rbac = {
+          # Only the allowed GitHub user gets admin. Everyone else gets role:''
+          # which means no permissions — they see the login page but can't enter.
+          "policy.csv"     = "g, ${var.argocd_github_allowed_user}, role:admin\n"
+          "policy.default" = "role:''"
         }
       }
 
       server = {
         service = {
-          type = "LoadBalancer"
-          # Creates an AWS NLB that gives the ArgoCD UI a public IP.
-          # Cost: ~$16/month while the cluster is running.
-          # In production: use ClusterIP here and put an Ingress in front
-          # so you get TLS, a proper hostname, and auth at the edge.
+          # ClusterIP means the pod is only reachable inside the cluster.
+          # The ALB Ingress below becomes the only public entry point.
+          # This replaces the previous LoadBalancer (NLB) — saving ~$16/month.
+          type = "ClusterIP"
+        }
+        ingress = {
+          enabled          = true
+          ingressClassName = "alb"
+          annotations = {
+            "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
+            "alb.ingress.kubernetes.io/target-type" = "ip"
+            # Joins the shared ALB used by the app and Grafana.
+            # One ALB serves all three hostnames — no extra load balancer cost.
+            "alb.ingress.kubernetes.io/group.name"  = "gitflow-analyzer"
+            "alb.ingress.kubernetes.io/group.order" = "15"
+          }
+          hosts = [var.argocd_hostname]
         }
       }
-    })
+    }),
+
+    # Dex connector config — written as raw YAML so the block scalar (|) is
+    # preserved exactly as ArgoCD expects it in argocd-cm.
+    # $dex.github.clientSecret is an ArgoCD substitution — at runtime ArgoCD
+    # reads the value from argocd-secret and injects it here.
+    <<-YAML
+      configs:
+        cm:
+          dex.config: |
+            connectors:
+              - type: github
+                id: github
+                name: GitHub
+                config:
+                  clientID: ${var.argocd_github_oauth_client_id}
+                  clientSecret: $dex.github.clientSecret
+                  redirectURI: https://${var.argocd_hostname}/api/dex/callback
+    YAML
   ]
 }
 
