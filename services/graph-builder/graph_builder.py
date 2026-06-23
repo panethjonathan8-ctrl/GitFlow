@@ -6,6 +6,47 @@ from pathlib import Path
 from git import Repo
 from secret_manager import get_github_token
 
+# Maps file extensions to display language names.
+# Used to label nodes so the frontend can colour them by language.
+EXTENSION_LANGUAGE = {
+    ".py": "Python",
+    ".js": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    ".jsx": "JavaScript",
+    ".go": "Go",
+    ".rb": "Ruby",
+    ".rs": "Rust",
+    ".java": "Java",
+    ".cs": "C#",
+    ".cpp": "C++",
+    ".cc": "C++",
+    ".c": "C",
+    ".h": "C",
+    ".swift": "Swift",
+    ".kt": "Kotlin",
+    ".php": "PHP",
+    ".scala": "Scala",
+    ".sh": "Shell",
+    ".tf": "Terraform",
+    ".yaml": "YAML",
+    ".yml": "YAML",
+    ".json": "JSON",
+    ".toml": "TOML",
+    ".html": "HTML",
+    ".css": "CSS",
+    ".scss": "CSS",
+}
+
+# Extensions we skip entirely — binaries, images, lock files, generated output.
+SKIP_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
+    ".pdf", ".zip", ".tar", ".gz", ".bz2", ".exe", ".dll", ".so",
+    ".pyc", ".pyo", ".class", ".wasm",
+    ".mp3", ".mp4", ".wav", ".ttf", ".woff", ".woff2",
+    ".lock",  # package-lock, yarn.lock, etc.
+}
+
 
 def parse_python_imports(file_path: str) -> list:
     """
@@ -87,9 +128,9 @@ def build_graph(repo_url: str) -> dict:
         edges = []
         node_ids = set()
 
-        def add_node(node_id: str, label: str, node_type: str):
+        def add_node(node_id: str, label: str, node_type: str, **extra):
             if node_id not in node_ids:
-                nodes.append({"id": node_id, "label": label, "type": node_type})
+                nodes.append({"id": node_id, "label": label, "type": node_type, **extra})
                 node_ids.add(node_id)
 
         # Walk the repo and process source files
@@ -102,27 +143,34 @@ def build_graph(repo_url: str) -> dict:
 
             for file in files:
                 file_path = os.path.join(root, file)
-                # Make the file path relative to the repo root for cleaner display
                 relative_path = os.path.relpath(file_path, temp_dir)
                 file_ext = Path(file).suffix.lower()
 
-                # Only process source files
-                if file_ext not in [".py", ".js", ".ts"]:
+                if file_ext in SKIP_EXTENSIONS:
                     continue
 
-                # Add this file as a node
-                file_node_id = relative_path
-                add_node(file_node_id, relative_path, "file")
+                # Only include files with a recognised extension.
+                language = EXTENSION_LANGUAGE.get(file_ext)
+                if language is None:
+                    continue
 
-                # Parse imports based on file type
+                # Top-level directory becomes the visual group in the frontend.
+                # e.g. "services/analyzer/app.py" → group "services"
+                path_parts = relative_path.replace("\\", "/").split("/")
+                group = path_parts[0] if len(path_parts) > 1 else "root"
+
+                file_node_id = relative_path
+                add_node(file_node_id, relative_path, "file",
+                         group=group, language=language)
+
+                # Parse imports for supported languages; others get nodes but no edges.
                 if file_ext == ".py":
                     imports = parse_python_imports(file_path)
-                elif file_ext in [".js", ".ts"]:
+                elif file_ext in [".js", ".ts", ".jsx", ".tsx"]:
                     imports = parse_js_imports(file_path)
                 else:
                     imports = []
 
-                # Add each imported module as a node and create an edge
                 for module in set(imports):
                     module_node_id = f"module:{module}"
                     add_node(module_node_id, module, "module")
