@@ -321,3 +321,4 @@ module "monitoring" {
 
   depends_on = [module.eks, module.argocd]
 }
+# tested CI pipeline
