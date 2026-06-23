@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitFlow Analyzer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.29.2/cytoscape.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/cytoscape-fcose@2.2.0/cytoscape-fcose.min.js"></script>
+  <script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -395,20 +395,21 @@ function initGraph() {
       {
         selector: 'node[type = "file"]',
         style: {
-          'background-color': '#7c3aed',
+          'background-color': '#7c3aed',  // overridden per-node by group colour
           'border-width': 0,
           'shape': 'ellipse',
           'label': 'data(shortLabel)',
-          'color': '#888888',
-          'font-size': 9,
+          'color': '#bbbbbb',
+          'font-size': 10,
           'text-valign': 'bottom',
           'text-halign': 'center',
           'text-margin-y': 4,
-          'width': 14,
-          'height': 14,
-          'text-max-width': 80,
+          'width': 7,
+          'height': 7,
+          'text-max-width': 100,
           'text-wrap': 'ellipsis',
-          'min-zoomed-font-size': 8
+          // Hidden until zoomed in — hub nodes override this per-node in renderGraph
+          'min-zoomed-font-size': 20
         }
       },
       {
@@ -418,24 +419,24 @@ function initGraph() {
           'border-width': 0,
           'shape': 'ellipse',
           'label': 'data(label)',
-          'color': '#666666',
-          'font-size': 8,
+          'color': '#aaaaaa',
+          'font-size': 10,
           'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 3,
-          'width': 9,
-          'height': 9,
-          'min-zoomed-font-size': 8
+          'text-margin-y': 4,
+          'width': 5,
+          'height': 5,
+          'min-zoomed-font-size': 20
         }
       },
       {
         selector: 'edge',
         style: {
           'width': 0.8,
-          'line-color': '#3a3a3a',
+          'line-color': '#5a5a5a',
           'target-arrow-shape': 'none',
           'curve-style': 'straight',
-          'opacity': 0.5
+          'opacity': 0.6
         }
       },
       {
@@ -444,7 +445,8 @@ function initGraph() {
           'border-width': 3,
           'border-color': '#a78bfa',
           'border-opacity': 0.9,
-          'color': '#d4d4d4',
+          'color': '#ffffff',
+          'min-zoomed-font-size': 0,  // always show label on clicked node
           'opacity': 1
         }
       },
@@ -622,21 +624,24 @@ function renderGraph(graph) {
   cy.elements().remove();
   cy.add(elements);
 
-  // Apply per-node group colour and scale size by degree (Obsidian-style).
+  // Apply group colour, degree-based size, and label visibility (Obsidian-style).
   cy.nodes().forEach(node => {
     const isFile = node.data('type') === 'file';
     const color = node.data('color');
     if (isFile && color) {
       node.style({ 'background-color': color });
     }
-    // Nodes with more connections get a larger dot — matches Obsidian behaviour.
+    // Hub nodes grow larger; leaf nodes stay as tiny dots — same as Obsidian.
     const deg = node.degree(false);
-    const base = isFile ? 14 : 9;
-    const size = Math.min(base + deg * 2, 42);
+    const base = isFile ? 7 : 5;
+    const size = Math.min(base + deg * 2.5, 32);
     node.style({ width: size, height: size });
+    // Hub nodes (3+ connections) show their label at normal zoom.
+    // Leaf nodes only show their label when the user zooms in closely.
+    node.style({ 'min-zoomed-font-size': deg >= 3 ? 8 : 20 });
   });
 
-  cy.layout({
+  const fcoseOptions = {
     name: 'fcose',
     quality: 'default',
     animate: true,
@@ -658,7 +663,15 @@ function renderGraph(graph) {
     gravity: 0.25,
     gravityRange: 3.8,
     numIter: 2500,
-  }).run();
+  };
+
+  // Fall back to built-in cose if the fcose CDN script failed to load.
+  try {
+    cy.layout(fcoseOptions).run();
+  } catch (e) {
+    cy.layout({ name: 'cose', animate: true, animationDuration: 900,
+                 nodeRepulsion: 8000, idealEdgeLength: 80, padding: 50 }).run();
+  }
 
   document.getElementById('graph-hint').style.display = 'block';
   document.getElementById('reset-view-btn').style.display = 'block';
