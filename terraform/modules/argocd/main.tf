@@ -58,6 +58,10 @@ resource "helm_release" "argocd" {
           # which means no permissions — they see the login page but can't enter.
           "policy.csv"     = "g, ${var.argocd_github_allowed_user}, role:admin\n"
           "policy.default" = "role:''"
+          # preferred_username is the JWT claim Dex sets to the GitHub login.
+          # Without it in scopes, ArgoCD only checks the groups claim (empty
+          # when no GitHub org is configured), so g, <username> never matches.
+          "scopes" = "[groups, preferred_username]"
         }
       }
 
