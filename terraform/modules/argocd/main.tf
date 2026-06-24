@@ -29,6 +29,13 @@ resource "helm_release" "argocd" {
 
   values = [
     yamlencode({
+      # global.domain is the primary domain setting in ArgoCD chart 7.x —
+      # it controls the ingress host rule, the Dex redirect URI base, and
+      # the server URL. server.ingress.hosts alone is not enough in this chart version.
+      global = {
+        domain = var.argocd_hostname
+      }
+
       configs = {
         params = {
           # TLS is terminated at CloudFront — ArgoCD itself speaks plain HTTP.
