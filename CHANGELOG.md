@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/panethjonathan8-ctrl/GitFlow/compare/v0.2.0...v0.3.0) (2026-06-24)
+
+
+### Features
+
+* expose ArgoCD UI at argocd.gitflow.space with GitHub OAuth ([#111](https://github.com/panethjonathan8-ctrl/GitFlow/issues/111)) ([2a6f401](https://github.com/panethjonathan8-ctrl/GitFlow/commit/2a6f4014c3cc7469283ac3ff5be28e6c81581d03))
+* redesign graph to Obsidian-style force-directed layout ([#106](https://github.com/panethjonathan8-ctrl/GitFlow/issues/106)) ([4871582](https://github.com/panethjonathan8-ctrl/GitFlow/commit/4871582c7b33701acf7cdb83a9e77729b00893c3))
+* show all languages in graph and organise by directory ([#104](https://github.com/panethjonathan8-ctrl/GitFlow/issues/104)) ([06e4447](https://github.com/panethjonathan8-ctrl/GitFlow/commit/06e44474f4bb4d51d19e5b9534cd3bd368e07fce))
+
+
+### Bug Fixes
+
+* add preferred_username to ArgoCD RBAC scopes ([3e8a23f](https://github.com/panethjonathan8-ctrl/GitFlow/commit/3e8a23fd097f6fcc436db42cef98d1af63bc9417))
+* add retry logic to smoke test for transient IRSA startup failures ([#102](https://github.com/panethjonathan8-ctrl/GitFlow/issues/102)) ([bbb6de0](https://github.com/panethjonathan8-ctrl/GitFlow/commit/bbb6de06e82539fd02ebd45efa788571d1e2b8fc))
+* correct fcose CDN URL and tune to Obsidian dot-map style ([#109](https://github.com/panethjonathan8-ctrl/GitFlow/issues/109)) ([d88f828](https://github.com/panethjonathan8-ctrl/GitFlow/commit/d88f8286f5639ceebd8e130a1065b88c2f291910))
+* return clear error message when analyzing a private or inaccessible repo ([#99](https://github.com/panethjonathan8-ctrl/GitFlow/issues/99)) ([a1ae447](https://github.com/panethjonathan8-ctrl/GitFlow/commit/a1ae447967ee837b3c66fc951ac882ac0c71ff23))
+* set global.domain in ArgoCD Helm values to fix ingress host ([06a44d3](https://github.com/panethjonathan8-ctrl/GitFlow/commit/06a44d3ff6161d066cf234688cdf488bf6aab76a))
+
 ## [0.2.0](https://github.com/panethjonathan8-ctrl/GitFlow/compare/v0.1.0...v0.2.0) (2026-06-21)
 
 
